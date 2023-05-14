@@ -2,6 +2,7 @@ import hashlib
 import inspect
 import json
 from typing import Any, Dict, Mapping, Union, cast, get_origin
+import uuid
 
 import glom
 import yaml
@@ -12,7 +13,10 @@ from hypergo.custom_types import TypedDictType
 class Utility:
     @staticmethod
     def deep_get(dic: Union[TypedDictType, Dict[str, Any]], key: str) -> Any:
-        return glom.glom(dic, key)
+        try:
+            return glom.glom(dic, key)
+        except KeyError:
+            return None
 
     @staticmethod
     def deep_set(dic: Union[TypedDictType, Dict[str, Any]], key: str, val: Any) -> None:
@@ -52,3 +56,7 @@ class Utility:
             ret = value_type(provided_value)
 
         return ret
+
+    @staticmethod
+    def uuid():
+        return str(uuid.uuid4())

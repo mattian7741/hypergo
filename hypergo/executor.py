@@ -10,7 +10,7 @@ from hypergo.local_storage import LocalStorage
 from hypergo.message import MessageType
 from hypergo.storage import Storage
 from hypergo.utility import Utility
-
+from hypergo.transaction import Transaction
 
 class Executor:
     @staticmethod
@@ -60,6 +60,9 @@ class Executor:
         if self._storage and "pass_by_reference" in self._config.get("input_operations", []):
             message = self.retrieve(message["storagekey"])
 
+        if self._storage:
+            message["transaction"] = self.restore_transaction(message.get("transaction"))
+
         return message
         # decompress
         # deserialize
@@ -70,6 +73,7 @@ class Executor:
     def seal_envelope(self, message: MessageType) -> MessageType:
         # encrypt/decrypt
         # streaming
+        # transaction
 
         # bind_output_arguments
         # output_mapping
@@ -78,11 +82,29 @@ class Executor:
         # compress
         # store
         envelope: MessageType = message
+        if self._storage:
+            envelope["transaction"] = self.persist_transaction(message.get("transaction"))
         if self._storage and "pass_by_reference" in self._config.get("output_operations", []):
             envelope["storagekey"] = f"passbyreference/{Utility.hash(json.dumps(envelope))}"
             self.store(envelope["storagekey"], message)
             envelope["body"] = {}
         return envelope
+
+    def persist_transaction(self, transaction: Transaction) -> str:
+        this_transaction: Transaction = transaction
+        while this_transaction:
+            self._storage.save(f"transactions/{this_transaction._id}", this_transaction.serialize())
+            this_transaction = this_transaction._parent
+
+        return transaction.lineage()
+
+    def restore_transaction(self, lineage: List[str]) -> Transaction:
+        parent: Optional[Transaction] = None
+        for transaction_id in lineage:
+            transaction: Transaction = Transaction.deserialize(self._storage.load(f"transactions/{transaction_id}"))
+            transaction._parent = parent
+            parent = transaction
+        return parent
 
     def execute(self, input_envelope: MessageType) -> Generator[MessageType, None, None]:
         input_message: MessageType = self.open_envelope(input_envelope)
