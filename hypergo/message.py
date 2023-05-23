@@ -1,24 +1,25 @@
 import json
 import sys
-from typing import cast, List, Union
+from typing import List, Union, cast
 
 import azure.functions as func
 from azure.servicebus import ServiceBusMessage
 
 from hypergo.custom_types import JsonDict, TypedDictType
+from hypergo.transaction import Transaction
 
 if sys.version_info >= (3, 11):
     from typing import NotRequired
 else:
     from typing_extensions import NotRequired
 
-from hypergo.transaction import Transaction
 
 class MessageType(TypedDictType):
     body: JsonDict
     routingkey: str
     transaction: Union[List[str], Transaction]
     storagekey: NotRequired[str]
+
 
 class Message:
     @staticmethod

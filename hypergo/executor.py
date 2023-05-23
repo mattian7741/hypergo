@@ -9,8 +9,9 @@ from hypergo.context import ContextType
 from hypergo.local_storage import LocalStorage
 from hypergo.message import MessageType
 from hypergo.storage import Storage
-from hypergo.utility import Utility
 from hypergo.transaction import Transaction
+from hypergo.utility import Utility
+
 
 class Executor:
     @staticmethod
@@ -93,8 +94,8 @@ class Executor:
     def persist_transaction(self, transaction: Transaction) -> str:
         this_transaction: Transaction = transaction
         while this_transaction:
-            self._storage.save(f"transactions/{this_transaction._id}", this_transaction.serialize())
-            this_transaction = this_transaction._parent
+            self._storage.save(f"transactions/{this_transaction.txid}", this_transaction.serialize())
+            this_transaction = this_transaction.parent
 
         return transaction.lineage()
 
@@ -102,7 +103,7 @@ class Executor:
         parent: Optional[Transaction] = None
         for transaction_id in lineage:
             transaction: Transaction = Transaction.deserialize(self._storage.load(f"transactions/{transaction_id}"))
-            transaction._parent = parent
+            transaction.parent = parent
             parent = transaction
         return parent
 

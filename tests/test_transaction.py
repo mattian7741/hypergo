@@ -80,7 +80,7 @@ class TestTransaction(unittest.TestCase):
         child_transaction: Transaction = parent_transaction.push()
 
         lineage: List[str] = child_transaction.lineage()
-        self.assertEqual(lineage, [child_transaction._id, parent_transaction._id])
+        self.assertEqual(lineage, [child_transaction._txid, parent_transaction._txid])
 
     def test_lineage_without_parent(self) -> None:
         data: Dict[str, Any] = {"name": "John", "age": 30}
@@ -88,7 +88,7 @@ class TestTransaction(unittest.TestCase):
 
         lineage: List[str] = transaction.lineage()
 
-        self.assertEqual(lineage, [transaction._id])
+        self.assertEqual(lineage, [transaction._txid])
 
 if __name__ == '__main__':
     unittest.main()

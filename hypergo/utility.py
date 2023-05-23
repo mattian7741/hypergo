@@ -1,8 +1,8 @@
 import hashlib
 import inspect
 import json
-from typing import Any, Dict, Mapping, Union, cast, get_origin
 import uuid
+from typing import Any, Dict, Mapping, Union, cast, get_origin
 
 import glom
 import yaml
@@ -58,5 +58,5 @@ class Utility:
         return ret
 
     @staticmethod
-    def uuid():
+    def uuid() -> str:
         return str(uuid.uuid4())
