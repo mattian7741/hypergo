@@ -16,16 +16,30 @@ class TransactionType(TypedDictType):
 
 
 class Transaction:
-    def __init__(self, parent_txid: Optional[str] = None, existing_data: Optional[Dict[str, Any]] = None) -> None:
-        data: Dict[str, Any] = existing_data or {}
-        self._parent: Optional["Transaction"] = Transaction.restore(parent_txid)
-        self._data: Dict[str, Any] = data
-        self._txid: str = Utility.uuid()
+    def __init__(self,
+                 txid: Optional[str] = None,
+                 parent_txid: Optional[str] = None,
+                 data: Optional[Dict[str,
+                                     Any]] = None) -> None:
+        self._data: Dict[str, Any] = data or {}
+        self._parent_txid: Optional[str] = m
+        self._txid: str = txid or Utility.uuid()
         # transaction id
         # storage
         # request response
         # map reduce
         # transaction data ALSO in payload
+
+    def __str__(self) -> str:
+        return f"txid:{self._txid} parentid:{self._parent_txid} data:{str(self._data)}"
+
+    @property
+    def data(self) -> Dict[str, Any]:
+        return self._data
+
+    @data.setter
+    def data(self, data: Dict[str, Any]):
+        self._data = data
 
     @property
     def txid(self) -> str:
@@ -36,7 +50,7 @@ class Transaction:
         return self._parent
 
     def push(self) -> "Transaction":
-        return Transaction(self)
+        return Transaction(parent_txid=self)
 
     def pop(self) -> Optional["Transaction"]:
         return self._parent
@@ -53,8 +67,23 @@ class Transaction:
         return [self._txid]
 
     def serialize(self) -> TransactionType:
-        return {"parent_txid": self._parent.txid if self._parent else None, "data": self._data}
+        return {
+            "parent_txid": self._parent.txid if self._parent else None,
+            "data": self._data}
 
     @staticmethod
     def deserialize(transaction_dict: TransactionType) -> "Transaction":
-        return Transaction(transaction_dict.get("parent_txid"), transaction_dict.get("data"))
+        return Transaction(
+            transaction_dict.get("parent_txid"),
+            transaction_dict.get("data"))
+
+
+if __name__ == "__main__":
+    transaction = Transaction()
+    transaction.data = {"x": "X", "1": "One", "a": {"b": {"c": "abc"}}}
+    transaction.set("x", "24")
+    abc = transaction.get("a.b.c")
+    print(abc)
+    print(str(transaction))
+    child = transaction.push()
+    print(str(child))
