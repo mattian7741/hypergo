@@ -27,11 +27,14 @@ def get_version() -> str:
 def main() -> None:
     """Summary."""
     ver: str = get_version()
-    tag: str = subprocess.check_output(['git', 'describe', '--tags']).decode('utf-8')
+    tag: str = subprocess.check_output(
+        ['git', 'describe', '--tags']).decode('utf-8')
     status: str = subprocess.check_output(['git', 'status']).decode('utf-8')
     try:
-        if tag.index(ver) == 0 and 'working tree clean' not in status:  # if version hasn't changed
-            print(f'Version {VERSION} must be incremented in src/version.py because codebase has changed')
+        if tag.index(
+                ver) == 0 and 'working tree clean' not in status:  # if version hasn't changed
+            print(
+                f'Version {VERSION} must be incremented in src/version.py because codebase has changed')
             sys.exit(1)
         else:
             # print('not status')

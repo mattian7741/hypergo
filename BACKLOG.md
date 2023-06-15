@@ -1,4 +1,6 @@
 
+- [ ] change component configuration to list instead of single (backward compatible)
+        - [ ] modify deployment to be able to support multiple configurations
 - [ ] pycoverage
 - [ ] pytest on top of unittest
 - [ ] make sure utiltiy/safecast tests are thorough
