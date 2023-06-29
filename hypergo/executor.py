@@ -4,6 +4,8 @@ import json
 import re
 from typing import Any, Callable, Generator, List, Mapping, Optional, cast
 
+import jsonschema
+
 from hypergo.config import ConfigType
 from hypergo.context import ContextType
 from hypergo.local_storage import LocalStorage
@@ -85,6 +87,10 @@ class Executor:
         return envelope
 
     def execute(self, input_envelope: MessageType) -> Generator[MessageType, None, None]:
+        input_json_schema = self._config.get("input_json_schema")
+        if input_json_schema:
+            jsonschema.validate(input_envelope.body, input_json_schema)
+
         input_message: MessageType = self.open_envelope(input_envelope)
         context: ContextType = {"message": input_message, "config": self._config}
         if self._storage:
@@ -109,6 +115,10 @@ class Executor:
                 handle_tuple(output_context, return_value)
             else:
                 handle_default(output_context, return_value)
+
+            output_json_schema = self._config.get("output_json_schema")
+            if output_json_schema:
+                jsonschema.validate(output_context["message"]["body"], output_json_schema)
 
             output_envelope: MessageType = self.seal_envelope(output_message)
             yield output_envelope
