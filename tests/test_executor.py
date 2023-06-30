@@ -140,7 +140,8 @@ class TestExecutor(unittest.TestCase):
             }
             with self.assertRaises(ValidationError):
                 next(executor.execute(input_envelope))
-            
+
+    # TODO: when Executor.execute() is refactored, create unit tests for the output_json_schema validation
 
 if __name__ == '__main__':
     unittest.main()
