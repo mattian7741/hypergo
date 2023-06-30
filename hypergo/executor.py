@@ -89,7 +89,7 @@ class Executor:
     def execute(self, input_envelope: MessageType) -> Generator[MessageType, None, None]:
         input_json_schema = self._config.get("input_json_schema")
         if input_json_schema:
-            jsonschema.validate(input_envelope.body, input_json_schema)
+            jsonschema.validate(input_envelope["body"], input_json_schema)
 
         input_message: MessageType = self.open_envelope(input_envelope)
         context: ContextType = {"message": input_message, "config": self._config}
