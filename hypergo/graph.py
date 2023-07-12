@@ -9,11 +9,15 @@ import graphviz
 
 
 def format_component(config: Dict[str, Union[None, str, List[str]]]) -> Tuple[str, str]:
-    component_string = f'<<table border="0" cellborder="0"><tr><td bgcolor="#0071BD">{config.get("name")}</td></tr></table>>'
+    component_string = (
+        f'<<table border="0" cellborder="0"><tr><td bgcolor="#0071BD">{config.get("name")}</td></tr></table>>'
+    )
     return (f'component_{config.get("name")}', component_string)
 
 
-def format_topic(typestr: str, config: Dict[str, Union[None, str, List[str]]]) -> Generator[Tuple[str, str], None, None]:
+def format_topic(
+    typestr: str, config: Dict[str, Union[None, str, List[str]]]
+) -> Generator[Tuple[str, str], None, None]:
     tlist = config.get(typestr) or []
     if isinstance(tlist, str):
         tlist = [tlist]
@@ -32,7 +36,7 @@ def load_configs(folders: List[str]) -> List[Dict[str, Union[None, str, List[str
             with open(config_file, 'r', encoding='utf8') as stream:
                 config_json = json.load(stream)
                 if not isinstance(config_json, list):
-                    config_json: List(any) = [config_json]
+                    config_json = [config_json]
                 for config in config_json:
                     if config and 'name' in config:
                         configs.append(config)
@@ -43,12 +47,12 @@ def topics(dot: graphviz.Digraph, configs: List[Dict[str, Union[None, str, List[
     for config in configs:
         for routing_key_element in format_topic('output_keys', config):
             create_edge(dot, format_component(config)[0], routing_key_element[0])
-            dot.node(*routing_key_element, shape='none')
+            dot.node(*routing_key_element, shape='none', fixedsize='false')
         for routing_key_element in format_topic('error_output_keys', config):
             create_edge(dot, format_component(config)[0], routing_key_element[0])
-            dot.node(*routing_key_element, shape='none')
+            dot.node(*routing_key_element, shape='none', fixedsize='false')
         for routing_key_element in format_topic('input_keys', config):
-            dot.node(*routing_key_element, shape='none')
+            dot.node(*routing_key_element, shape='none', fixedsize='false')
             create_edge(dot, routing_key_element[0], format_component(config)[0])
 
 

@@ -1,6 +1,6 @@
 import json
 import sys
-from typing import List
+from typing import Any, Dict, List
 
 import yaml
 
@@ -28,6 +28,7 @@ class ConfigType(TypedDictType):
     output_operations: NotRequired[List[str]]
     input_json_schema: NotRequired[JsonDict]
     output_json_schema: NotRequired[JsonDict]
+    custom_properties: NotRequired[Dict[str, Any]]
 
 
 class Config:  # pylint: disable=too-many-instance-attributes

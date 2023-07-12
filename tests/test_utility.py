@@ -1,13 +1,18 @@
+import os
+import sys
 import unittest
 from unittest.mock import MagicMock
 
-from typing import Any, Dict, Mapping, Union
-from hypergo.custom_types import TypedDictType
+from typing import Dict
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
 from hypergo.utility import Utility
 
-import glom
 import json
 import yaml
+
 
 class TestUtility(unittest.TestCase):
     def test_deep_get(self) -> None:
@@ -17,10 +22,16 @@ class TestUtility(unittest.TestCase):
         expected_output: int = 1
         self.assertEqual(Utility.deep_get(input_dict, key), expected_output)
 
+        # Test for keys with . and no nested structure
+        input_dict: Dict[str, Dict[str, int]] = {"a.b": 1}
+        key: str = "a.b"
+        expected_output: int = 1
+        self.assertEqual(Utility.deep_get(input_dict, key.replace('.', '\\.')), expected_output)
+
         # Test when key does not exist in dictionary
         input_dict: Dict[str, Dict[str, int]] = {"a": {"b": 1}}
         key: str = "a.c"
-        with self.assertRaises(glom.PathAccessError):
+        with self.assertRaises(KeyError):
             Utility.deep_get(input_dict, key)
 
     def test_deep_set(self) -> None:

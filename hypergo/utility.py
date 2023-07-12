@@ -4,6 +4,7 @@ import json
 from typing import Any, Dict, Mapping, Union, cast, get_origin
 
 import glom
+import pydash
 import yaml
 
 from hypergo.custom_types import TypedDictType
@@ -12,7 +13,10 @@ from hypergo.custom_types import TypedDictType
 class Utility:
     @staticmethod
     def deep_get(dic: Union[TypedDictType, Dict[str, Any]], key: str) -> Any:
-        return glom.glom(dic, key)
+        result = pydash.get(dic, key)
+        if not result:
+            raise KeyError("Spec {key} not found in the dictionary")
+        return result
 
     @staticmethod
     def deep_set(dic: Union[TypedDictType, Dict[str, Any]], key: str, val: Any) -> None:
@@ -45,7 +49,22 @@ class Utility:
         ret: Any = provided_value
         value_type: Any = get_origin(expected_type) or expected_type
 
-        if value_type not in [int, float, complex, bool, str, bytes, bytearray, memoryview, list, tuple, range, set, frozenset, dict]:
+        if value_type not in [
+            int,
+            float,
+            complex,
+            bool,
+            str,
+            bytes,
+            bytearray,
+            memoryview,
+            list,
+            tuple,
+            range,
+            set,
+            frozenset,
+            dict,
+        ]:
             return cast(value_type, provided_value)
 
         if value_type != inspect.Parameter.empty:

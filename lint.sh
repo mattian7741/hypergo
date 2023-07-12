@@ -14,7 +14,7 @@ autopep8 --in-place --aggressive --aggressive --recursive $mod
 if [ $? -ne 0 ]; then { printf "\e[31mFailed, aborting.\e[0m\n" ; exit 1; } fi
 
 printf "\e[1mFormatting code (black) $mod ...\e[0m\n"
-black -S --line-length 512 $mod
+black -S --line-length 120 $mod
 if [ $? -ne 0 ]; then { printf "\e[31mFailed, aborting.\e[0m\n" ; exit 1; } fi
 
 printf "\e[1mSorting imports (isort) $mod ...\e[0m\n"
