@@ -31,7 +31,7 @@ class Utility:
     @staticmethod
     def deep_get(dic: Union[TypedDictType, Dict[str, Any]], key: str) -> Any:
         if not pydash.has(dic, key):
-            raise KeyError(f"Spec {key}  not found in the dictionary")
+            raise KeyError(f"Spec {key}  not found in the dictionary {dic}")
         return pydash.get(dic, key)
 
     @staticmethod
@@ -124,25 +124,29 @@ class Utility:
             return serialized
 
     @staticmethod
-    def compress(data: Any, key: Optional[str] = None) -> Any:
-        root_data = {"root": data}
-        root_key = f"root.{key}" if key else "root"
-        Utility.deep_set(
-            root_data,
-            root_key,
-            base64.b64encode(lzma.compress(json.dumps(Utility.deep_get(root_data, root_key)).encode("utf-8"))).decode(
-                "utf-8"
-            ),
-        )
-        return data
+    def compress(data: Any, *keys) -> Any:
+        root_data = {"__root__": data}
+        if not keys:
+            keys = [""]
+        for key in keys:
+            root_key = f"__root__.{key}" if key else "__root__"
+            Utility.deep_set(
+                root_data,
+                root_key,
+                base64.b64encode(lzma.compress(json.dumps(Utility.deep_get(root_data, root_key)).encode("utf-8"))).decode("utf-8"),
+            )
+        return Utility.deep_get(root_data, "__root__")
 
     @staticmethod
-    def uncompress(compressed_data: Any, key: Optional[str] = None) -> Any:
-        root_data = {"root": compressed_data}
-        root_key = f"root.{key}" if key else "root"
-        Utility.deep_set(
-            root_data,
-            root_key,
-            json.loads(lzma.decompress(base64.b64decode(Utility.deep_get(root_data, root_key))).decode("utf-8")),
-        )
-        return compressed_data
+    def uncompress(compressed_data: Any, *keys) -> Any:
+        root_data = {"__root__": compressed_data}
+        if not keys:
+            keys = [""]
+        for key in keys:
+            root_key = f"__root__.{key}" if key else "__root__"
+            Utility.deep_set(
+                root_data,
+                root_key,
+                json.loads(lzma.decompress(base64.b64decode(Utility.deep_get(root_data, root_key))).decode("utf-8")),
+            )
+        return Utility.deep_get(root_data, "__root__")

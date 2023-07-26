@@ -9,6 +9,33 @@ T = TypeVar("T")
 
 class Transform:
     @staticmethod
+    def operations(func):
+        opmap = {
+            "uncompress": Utility.uncompress,
+            "deserialize": Utility.deserialize,
+            "serialize": Utility.serialize,
+            "compress": Utility.compress
+        }
+        def sort_a_like_b(A, B):
+            B_index = {b: i for i, b in enumerate(B)}
+            return sorted(A, key=lambda x: B_index.get(x[0], len(B)))
+
+        def wrapper(self, data):
+
+            inops = sort_a_like_b(Utility.deep_get(self._config, "input_operations"), list(opmap.keys()))
+            outops = sort_a_like_b(Utility.deep_get(self._config, "output_operations"), list(opmap.keys()))
+            mod_data = data
+            for op in inops:
+                mod_data = opmap[op[0]](mod_data, *op[1:])
+            for result in func(self, mod_data):
+                mod_data = result             
+                for op in outops:
+                    mod_data = opmap[op[0]](mod_data, *op[1:])
+
+                yield mod_data
+        return wrapper
+
+    @staticmethod
     def serialization(func: Callable[..., Generator[T, None, None]]) -> Callable[..., Generator[T, None, None]]:
         def serialized_func(self: Any, data: T) -> Generator[T, None, None]:
             serialized_data = (Utility.serialize(result) for result in func(self, Utility.deserialize(data)))

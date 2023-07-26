@@ -9,15 +9,11 @@ import graphviz
 
 
 def format_component(config: Dict[str, Union[None, str, List[str]]]) -> Tuple[str, str]:
-    component_string = (
-        f'<<table border="0" cellborder="0"><tr><td bgcolor="#0071BD">{config.get("name")}</td></tr></table>>'
-    )
+    component_string = f'<<table border="0" cellborder="0"><tr><td bgcolor="#0071BD">{config.get("name")}</td></tr></table>>'
     return (f'component_{config.get("name")}', component_string)
 
 
-def format_topic(
-    typestr: str, config: Dict[str, Union[None, str, List[str]]]
-) -> Generator[Tuple[str, str], None, None]:
+def format_topic(typestr: str, config: Dict[str, Union[None, str, List[str]]]) -> Generator[Tuple[str, str], None, None]:
     tlist = config.get(typestr) or []
     if isinstance(tlist, str):
         tlist = [tlist]

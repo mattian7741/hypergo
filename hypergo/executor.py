@@ -55,10 +55,7 @@ class Executor:
 
         args: List[Any] = []
         input_message_routing_key: str = Utility.deep_get(context, "message.routingkey")
-        input_bindings: List[str] = [
-            get_formatted_input_binding(input_binding=input_binding, routing_key=input_message_routing_key)
-            for input_binding in self._config["input_bindings"]
-        ]
+        input_bindings: List[str] = [get_formatted_input_binding(input_binding=input_binding, routing_key=input_message_routing_key) for input_binding in self._config["input_bindings"]]
         for arg, argtype in zip(input_bindings, self._arg_spec):
             # determine if arg binding is a literal denoted by '<literal>'
             val: Any = ((match := re.match(r"'(.*)'", arg)) and match.group(1)) or Utility.deep_get(context, arg)
@@ -85,15 +82,13 @@ class Executor:
                 # from its input_key and append it to tokens
                 tokens.append(".".join(routing_key_set.difference(intersection_set)))
         token: str = self.organize_tokens(tokens)
-        output_tokens: List[str] = [
-            re.sub(r"(?<=\.)\?(?=\.)|^\?|(?<=\.)\?$|^\?$", token, output_key)
-            for output_key in self._config["output_keys"]
-        ]
+        output_tokens: List[str] = [re.sub(r"(?<=\.)\?(?=\.)|^\?|(?<=\.)\?$|^\?$", token, output_key) for output_key in self._config["output_keys"]]
         return self.organize_tokens(output_tokens)
 
-    @Transform.pass_by_reference
-    @Transform.compression("body")
-    @Transform.serialization
+    # @Transform.pass_by_reference
+    # @Transform.compression("body")
+    # @Transform.serialization
+    @Transform.operations
     def execute(self, input_message: MessageType) -> Generator[MessageType, None, None]:
         context: ContextType = {"message": input_message, "config": self._config}
         if self._storage:
