@@ -9,6 +9,7 @@ from hypergo.context import ContextType
 from hypergo.local_storage import LocalStorage
 from hypergo.message import MessageType
 from hypergo.storage import Storage
+from hypergo.transform import Transform
 from hypergo.utility import Utility
 
 
@@ -125,6 +126,7 @@ class Executor:
         ]
         return self.organize_tokens(output_tokens)
 
+    @Transform.serialization
     def execute(self, input_envelope: MessageType) -> Generator[MessageType, None, None]:
         input_message: MessageType = self.open_envelope(input_envelope)
         context: ContextType = {"message": input_message, "config": self._config}
