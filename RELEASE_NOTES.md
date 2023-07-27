@@ -1,5 +1,32 @@
 ## Release Notes - Version X.Y.Z (Replace X.Y.Z with the actual version number)
 
+### New Features:
+- Added a new `decorator refactor` task to improve the decorator system.
+- Implemented an SDK file and message viewer for handling compressed, encrypted, and serialized messages.
+- Added a new `passbyref` decorator for pass-by-reference functionality.
+- Introduced a `clean up utility class` task to enhance code maintenance.
+- Improved graph handling by addressing `xenon complexity issues`.
+- Grouped similar types into subgraphs for better organization.
+- Introduced support for wildcard configurations to enable more flexible setups.
+- Added the ability to display payloads or bindings for better visibility.
+
+### Bug Fixes:
+- Resolved an issue in `hypergo_cli.py` that caused a `BrokenPipeError` when no input message was piped through stdin.
+
+### Behavior Changes:
+- Refactored the `hypergo/executor.py` file to improve code structure and readability.
+- Changed the `execute` method in the `Executor` class to utilize the `Transform.pass_by_reference` decorator for pass-by-reference functionality.
+- Updated the `compression` decorator in the `Transform` class to handle input and output compression based on the configuration.
+
+### Miscellaneous:
+- Performed code cleanup and made various improvements throughout the codebase for better maintainability.
+
+**Note:** The above release notes are based on the inferred changes from the provided Git diff. The actual changes and their impact may vary. Please review the code and changes for a more detailed understanding of the release.
+
+---
+
+## Release Notes - Version X.Y.Z (Replace X.Y.Z with the actual version number)
+
 ### New Features
 
 - Added **compression** decorator to the `hypergo/transform.py` module.

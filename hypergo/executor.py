@@ -1,12 +1,10 @@
 import importlib
 import inspect
-import json
 import re
 from typing import Any, Callable, Generator, List, Mapping, Optional, Set, cast
 
 from hypergo.config import ConfigType
 from hypergo.context import ContextType
-from hypergo.local_storage import LocalStorage
 from hypergo.message import MessageType
 from hypergo.storage import Storage
 from hypergo.transform import Transform
@@ -29,6 +27,14 @@ class Executor:
         self._func_spec: Callable[..., Any] = Executor.func_spec(config["lib_func"])
         self._arg_spec: List[type] = Executor.arg_spec(self._func_spec)
         self._storage: Optional[Storage] = storage
+
+    @property
+    def storage(self) -> Optional[Storage]:
+        return self._storage
+
+    @property
+    def config(self) -> ConfigType:
+        return self._config
 
     def get_args(self, context: ContextType) -> List[Any]:
         def get_formatted_input_binding(input_binding: str, routing_key: str) -> str:
@@ -64,47 +70,6 @@ class Executor:
 
         return args
 
-    def retrieve(self, key: str) -> MessageType:
-        if not self._storage:
-            raise AttributeError("No hypergo.storage implemenation provided")
-        return cast(MessageType, json.loads(self._storage.load(key)))
-
-    def store(self, key: str, message: MessageType) -> None:
-        if not self._storage:
-            raise AttributeError("No hypergo.storage implemenation provided")
-        self._storage.save(key, json.dumps(message))
-
-    def open_envelope(self, envelope: MessageType) -> MessageType:
-        # retrieve
-        message: MessageType = envelope
-
-        if self._storage and "pass_by_reference" in self._config.get("input_operations", []):
-            message = self.retrieve(message["storagekey"])
-
-        return message
-        # decompress
-        # deserialize
-        # input_validation
-        # input_mapping
-        # bind_input_arguments
-
-    def seal_envelope(self, message: MessageType) -> MessageType:
-        # encrypt/decrypt
-        # streaming
-
-        # bind_output_arguments
-        # output_mapping
-        # output_validation
-        # serialize
-        # compress
-        # store
-        envelope: MessageType = message
-        if self._storage and "pass_by_reference" in self._config.get("output_operations", []):
-            envelope["storagekey"] = f"passbyreference/{Utility.hash(json.dumps(envelope))}"
-            self.store(envelope["storagekey"], message)
-            envelope["body"] = {}
-        return envelope
-
     def get_output_routing_key(self, input_message_routing_key: str) -> str:
         routing_key_set: Set[str] = set(input_message_routing_key.split("."))
         tokens: List[str] = []
@@ -126,10 +91,10 @@ class Executor:
         ]
         return self.organize_tokens(output_tokens)
 
+    @Transform.pass_by_reference
     @Transform.compression("body")
     @Transform.serialization
-    def execute(self, input_envelope: MessageType) -> Generator[MessageType, None, None]:
-        input_message: MessageType = self.open_envelope(input_envelope)
+    def execute(self, input_message: MessageType) -> Generator[MessageType, None, None]:
         context: ContextType = {"message": input_message, "config": self._config}
         if self._storage:
             context["storage"] = self._storage.use_sub_path(f"component/private/{self._config['name']}")
@@ -154,28 +119,7 @@ class Executor:
             else:
                 handle_default(output_context, return_value)
 
-            output_envelope: MessageType = self.seal_envelope(output_message)
-            yield output_envelope
+            yield output_message
 
     def organize_tokens(self, keys: List[str]) -> str:
         return ".".join(sorted(set(".".join(keys).split("."))))
-
-
-def main() -> None:
-    cfg: ConfigType = {
-        "namespace": "datalink",
-        "name": "csvconverter",
-        "package": "ldp-csv-to-json-converter",
-        "lib_func": "csv_to_json_converter_appliance.__main__.csv_to_json_appliance",
-        "input_keys": ["batch.csv"],
-        "output_keys": ["batch.json"],
-        "input_bindings": ["message.body.data_blob_path"],
-        "output_bindings": ["message.body.json_data"],
-    }
-    stg: Storage = LocalStorage()
-    executor = Executor(cfg, stg)
-    print(executor.retrieve("hypergo/json_test_data.json"))
-
-
-if __name__ == "__main__":
-    main()

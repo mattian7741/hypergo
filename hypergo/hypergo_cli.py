@@ -43,7 +43,7 @@ class HypergoCli:
                 raise BrokenPipeError("No input message piped in through stdin")
 
             connection = StdioConnection()
-            connection.consume(args[0], config, LocalStorage().use_sub_path("private_storage"))
+            connection.consume(args[0], config, LocalStorage())
 
         except Exception as err:
             print(f"*** {err}")

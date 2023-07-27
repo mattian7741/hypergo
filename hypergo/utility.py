@@ -12,7 +12,7 @@ import glom
 import pydash
 import yaml
 
-from hypergo.custom_types import TypedDictType
+from hypergo.custom_types import JsonType, TypedDictType
 
 
 def traverse_datastructures(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
@@ -30,10 +30,9 @@ def traverse_datastructures(func: Callable[[Any], Any]) -> Callable[[Any], Any]:
 class Utility:
     @staticmethod
     def deep_get(dic: Union[TypedDictType, Dict[str, Any]], key: str) -> Any:
-        result = pydash.get(dic, key)
-        if not result:
+        if not pydash.has(dic, key):
             raise KeyError(f"Spec {key}  not found in the dictionary")
-        return result
+        return pydash.get(dic, key)
 
     @staticmethod
     def deep_set(dic: Union[TypedDictType, Dict[str, Any]], key: str, val: Any) -> None:
@@ -88,6 +87,17 @@ class Utility:
             ret = value_type(provided_value)
 
         return ret
+
+    @staticmethod
+    def stringify(obj: Any) -> str:
+        try:
+            return json.dumps(obj)
+        except (TypeError, ValueError):
+            return str(obj)
+
+    @staticmethod
+    def objectify(string: str) -> JsonType:
+        return cast(JsonType, json.loads(string))
 
     @staticmethod
     @traverse_datastructures

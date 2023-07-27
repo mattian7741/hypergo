@@ -3,15 +3,20 @@
 - [x] local component runner
 - [x] decorators
         - [x] serialization
+- [ ] decorator refactor
 - [ ] sdk unit tests
         - [ ] automated in linter
+- [ ] create an SDK file and message viewer (for compressed and encrypted and serialized messages)
 - [ ] more decorators
+        - [x] passbyref
         - [ ] validation
-        - [ ] compression
+        - [x] compression
         - [ ] encryption
         - [ ] mapping
         - [ ] transactions
+- [ ] clean up utility class
 - [ ] graph fixes
+        - [ ] xenon complexity issues
         - [ ] group like types into subgraphs
         - [ ] support wildcard configurations
         - [ ] show payloads or bindings
