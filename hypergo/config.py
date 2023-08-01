@@ -46,6 +46,7 @@ class Config:
 
     @staticmethod
     def convert(cfg_dict: JsonDict) -> ConfigType:
+        print(json.dumps(cfg_dict))
         mapping = {
             "0.X.X": Mapping(
                 {
@@ -66,8 +67,23 @@ class Config:
                     "custom_properties": lambda source: source("custom_properties", {}),
                 }
             ),
-            # "1.X.X": Mapping({
+            "1.X.X": Mapping({
+                "version": "2.0.0",
+                "name": lambda source: source("name"),
+                "namespace": lambda source: source("namespace"),
+                "package": lambda source: source("package"),
+                "lib_func": lambda source: source("lib_func"),
+                "input_keys": lambda source: source("input_keys"),
+                "output_keys": lambda source: source("output_keys"),
+                "input_bindings": lambda source: source("input_bindings"),
+                "output_bindings": lambda source: source("output_bindings"),
+                "input_operations": lambda source: [{"compression": ["compression", "body"], "serialization": ["serialization"], "passbyreference": ["passbyreference"]}[op] for op in source("input_operations")],
+                "output_operations": lambda source: [{"compression": ["compression", "body"], "serialization": ["serialization"], "passbyreference": ["passbyreference"]}[op] for op in source("output_operations")],
+                "custom_properties": lambda source: source("custom_properties")
+            }),
+            # "2.X.X": Mapping({
             #     "version": "2.0.0",
+            #     "name": lambda source: source("name"),
             #     "namespace": lambda source: source("namespace"),
             #     "package": lambda source: source("package"),
             #     "lib_func": lambda source: source("lib_func"),
@@ -75,12 +91,9 @@ class Config:
             #     "output_keys": lambda source: source("output_keys"),
             #     "input_bindings": lambda source: source("input_bindings"),
             #     "output_bindings": lambda source: source("output_bindings"),
-            #     "input_operations": lambda source: [[op] for op in source("input_operations", [])],
-            #     "output_operations": lambda source: [[op] for op in source("output_operations", [])],
+            #     "input_operations": lambda source: source("input_operations"),
+            #     "output_operations": lambda source: source("output_operations"),
             #     "custom_properties": lambda source: source("custom_properties")
-            # }),
-            # "2.X.X": Mapping({
-            #     "version": "3.0.0",
             # }),
         }.get(re.sub(r"(\d)\.\d\.\d", "\\1.X.X", Utility.deep_get(cfg_dict, "version", "0.0.0")))
 
