@@ -48,7 +48,7 @@ class Executor:
                     if key_set.intersection(rk_set) == key_set and len(key_set) > maxlen:
                         maxlen = len(key_set)
                         matched_key = key
-                return re.sub(r"\.", "\\.", matched_key)
+                return re.sub(r"\.", "\\.", matched_key) or "?"
 
             node_path: List[str] = []
             for node in input_string.split("."):
@@ -102,7 +102,12 @@ class Executor:
         ]
         return self.organize_tokens(output_tokens)
 
-    @Transform.operations
+    @Transform.operation("passbyreference")
+    @Transform.operation("compression")
+    @Transform.operation("encryption")
+    @Transform.operation("serialization")
+    # ContextDecorator
+    # TransactionDecorator
     def execute(self, input_message: MessageType) -> Generator[MessageType, None, None]:
         context: ContextType = {"message": input_message, "config": self._config}
         if self._storage:

@@ -19,8 +19,9 @@ setup(
         'ansicolors',
         'click-default-group',
         'graphviz',
-         'urllib3<2.0',
-         'dill'
+        'urllib3<2.0',
+        'dill',
+        'cryptography'
     ],
     entry_points={
         'console_scripts': [
