@@ -1,9 +1,12 @@
 ----------
 # PHASE 1
+- [ ] update config cli instead of blind update at runtime
+- [ ] prefixes for passbyref, serialization, compression, encryption, etc.
+- [ ] context decorator
 - [x] local component runner
 - [x] decorators
         - [x] serialization
-- [ ] decorator refactor
+- [x] decorator refactor
 - [ ] sdk unit tests
         - [ ] automated in linter
 - [ ] create an SDK file and message viewer (for compressed and encrypted and serialized messages)
