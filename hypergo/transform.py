@@ -57,7 +57,7 @@ class Transform:
                     str_result = Utility.stringify(out_message)
                     out_storage_key = Utility.hash(str_result)
                     storage.save(out_storage_key, str_result)
-                    out_message = {"body": {}, "routingkey": out_message["routingkey"], "storagekey": out_storage_key}
+                    out_message = {"body": {}, "routingkey": out_message['routingkey'], "storagekey": out_storage_key}
                 yield out_message
 
         return wrapped_func
