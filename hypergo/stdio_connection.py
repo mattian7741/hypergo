@@ -2,8 +2,8 @@ import json
 from typing import List, Union
 
 from hypergo.config import ConfigType
+from hypergo.connection import Connection
 from hypergo.message import Message, MessageType
-from hypergo.service_bus_connection import ServiceBusConnection
 from hypergo.storage import Storage
 from hypergo.utility import Utility
 
@@ -16,7 +16,7 @@ class RoutingKeyMismatchError(Exception):
         super().__init__(message)
 
 
-class StdioConnection(ServiceBusConnection):
+class StdioConnection(Connection):
     def __init__(self) -> None:
         pass
 

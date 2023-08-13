@@ -5,12 +5,12 @@ from azure.servicebus import (ServiceBusClient, ServiceBusMessage,
                               ServiceBusSender)
 
 from hypergo.config import ConfigType
+from hypergo.connection import Connection
 from hypergo.message import Message, MessageType
-from hypergo.service_bus_connection import ServiceBusConnection
 from hypergo.storage import Storage
 
 
-class AzureServiceBusConnection(ServiceBusConnection):
+class AzureServiceBusConnection(Connection):
     def __init__(self, conn_str: str) -> None:
         self._service_bus_client: ServiceBusClient = ServiceBusClient.from_connection_string(conn_str)
 

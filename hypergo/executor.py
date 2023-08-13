@@ -110,9 +110,12 @@ class Executor:
         ]
         return self.organize_tokens(output_tokens)
 
-    @Transform.pass_by_reference
-    @Transform.compression("body")
-    @Transform.serialization
+    @Transform.operation("passbyreference")
+    @Transform.operation("compression")
+    @Transform.operation("encryption")
+    @Transform.operation("serialization")
+    # ContextDecorator
+    # TransactionDecorator
     def execute(self, input_message: MessageType) -> Generator[MessageType, None, None]:
         context: ContextType = {"message": input_message, "config": self._config}
         if self._storage:
