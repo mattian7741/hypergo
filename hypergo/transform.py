@@ -39,7 +39,7 @@ class Transform:
                 args: List[List[Any]] = {
                     "compression": [[Utility.uncompress], [Utility.compress]],
                     "serialization": [[Utility.deserialize], [Utility.serialize]],
-                    "passbyreference": [
+                    "pass_by_reference": [
                         [Transform.fetchbyreference, self.storage],
                         [Transform.storebyreference, self.storage],
                     ],
@@ -49,11 +49,17 @@ class Transform:
                 output_operations = Utility.deep_get(self.config, "output_operations", {})
                 if op_name in input_operations:
                     for key in input_operations[op_name] or [None]:
+                        tokens = key.split(".")
+                        if tokens[0] == "message":
+                            key = ".".join(tokens[1:])
                         data = args[0][0](data, key, *args[0][1:])
 
                 for result in func(self, data):
                     if op_name in output_operations:
                         for key in output_operations[op_name] or [None]:
+                            tokens = key.split(".")
+                            if tokens[0] == "message":
+                                key = ".".join(tokens[1:])
                             result = args[1][0](result, key, *args[1][1:])
                     yield result
 
