@@ -43,7 +43,7 @@ class Message:
     @staticmethod
     def to_azure_service_bus_service_bus_message(message: MessageType) -> ServiceBusMessage:
         ret: ServiceBusMessage = ServiceBusMessage(
-            body=json.dumps(message.get("body")),
+            body=json.dumps(message["body"]),
             application_properties={
                 "routingkey": message["routingkey"],
                 "storagekey": cast(str, message.get("storagekey")),
