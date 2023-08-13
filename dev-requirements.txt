@@ -13,3 +13,4 @@ glom
 azure-servicebus
 azure-functions
 types-PyYAML
+click

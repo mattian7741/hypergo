@@ -137,7 +137,7 @@ class Utility:
             decoded: bytes = base64.b64decode(utfencoded)
             deserialized: Any = dill.loads(decoded)
             return deserialized
-        except (binascii.Error, dill.UnpicklingError, AttributeError, MemoryError):
+        except (binascii.Error, dill.UnpicklingError, AttributeError, ValueError, MemoryError):
             return serialized
 
     @staticmethod

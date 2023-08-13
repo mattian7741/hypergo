@@ -12,6 +12,49 @@ from hypergo.transform import Transform
 from hypergo.utility import Utility, traverse_datastructures
 
 
+def do_question_mark(context: Dict[str, Any], input_string: Any) -> str:
+    def find_best_key(field_path: List[str], routingkey: str) -> str:
+        rk_set: Set[str] = set(routingkey.split("."))
+        matched_key: str = ""
+        maxlen: int = 0
+        for key in Utility.deep_get(context, ".".join(field_path)):
+            key_set: Set[str] = set(key.split("."))
+            if key_set.intersection(rk_set) == key_set and len(key_set) > maxlen:
+                maxlen = len(key_set)
+                matched_key = key
+        return re.sub(r"\.", "\\.", matched_key)
+
+    node_path: List[str] = []
+    for node in input_string.split("."):
+        node_path.append(
+            find_best_key(node_path, Utility.deep_get(context, "message.routingkey")) if node == "?" else node
+        )
+    return ".".join(node_path)
+
+
+def do_substitution(value: Any, data: Dict[str, Any]) -> Any:
+    @traverse_datastructures
+    def substitute(string: str, data: Dict[str, Any]) -> Any:
+        result = string
+        if isinstance(string, str):
+            match: Optional[Match[str]] = re.match(r"^{([^}]+)}$", string)
+            result = (
+                Utility.deep_get(data, do_question_mark(data, match.group(1)), None)  # match.group(0))
+                if match
+                else re.sub(
+                    r"{([^}]+)}",
+                    lambda match: str(Utility.deep_get(data, do_question_mark(data, match.group(1)), "")),
+                    string,
+                )
+            )
+
+        if result != string:
+            result = substitute(result, data)
+        return result
+
+    return substitute(value, data)
+
+
 class Executor:
     @staticmethod
     def func_spec(fn_name: str) -> Callable[..., Any]:
@@ -38,41 +81,6 @@ class Executor:
         return self._config
 
     def get_args(self, context: ContextType) -> List[Any]:
-        def do_question_mark(input_string: str) -> str:
-            def find_best_key(field_path: List[str], routingkey: str) -> str:
-                rk_set: Set[str] = set(routingkey.split("."))
-                matched_key: str = ""
-                maxlen: int = 0
-                for key in Utility.deep_get(context, ".".join(field_path)):
-                    key_set: Set[str] = set(key.split("."))
-                    if key_set.intersection(rk_set) == key_set and len(key_set) > maxlen:
-                        maxlen = len(key_set)
-                        matched_key = key
-                return re.sub(r"\.", "\\.", matched_key) or "?"
-
-            node_path: List[str] = []
-            for node in input_string.split("."):
-                node_path.append(
-                    find_best_key(node_path, Utility.deep_get(context, "message.routingkey")) if node == "?" else node
-                )
-            return ".".join(node_path)
-
-        def do_substitution(value: Any, data: Dict[str, Any]) -> Any:
-            @traverse_datastructures
-            def substitute(string: str, data: Dict[str, Any]) -> Any:
-                match: Optional[Match[str]] = re.match(r"^{([^}]+)}$", string)
-                return (
-                    Utility.deep_get(data, do_question_mark(match.group(1)), match.group(0))
-                    if match
-                    else re.sub(
-                        r"{([^}]+)}",
-                        lambda match: str(Utility.deep_get(data, do_question_mark(match.group(1)), match.group(0))),
-                        string,
-                    )
-                )
-
-            return substitute(value, data)
-
         return [
             val if argtype == inspect.Parameter.empty else Utility.safecast(argtype, val)
             for val, argtype in zip(
@@ -112,6 +120,12 @@ class Executor:
         context: ContextType = {"message": input_message, "config": self._config}
         if self._storage:
             context["storage"] = self._storage.use_sub_path(f"component/private/{self._config['name']}")
+        # This mutates config with substitutions - not necessary for input binding substitution
+        # Unclear which approach is better - do we want the original config with references?  Or
+        # Do we want to mutate config and replace values with substitutions?
+        # This is useful if we want to configure routingkeys with paramaterized values - So
+        # We should keep it
+        context["config"] = do_substitution(context["config"], cast(Dict[str, Any], context))
         args: List[Any] = self.get_args(context)
         execution: Any = self._func_spec(*args)
         output_routing_key: str = self.get_output_routing_key(input_message["routingkey"])
