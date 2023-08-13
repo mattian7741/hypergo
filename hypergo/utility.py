@@ -4,7 +4,6 @@ import hashlib
 import inspect
 import json
 import lzma
-from functools import wraps
 from typing import (Any, Callable, Dict, Mapping, Optional, Tuple, Union, cast,
                     get_origin)
 
@@ -12,13 +11,11 @@ import dill
 import glom
 import pydash
 import yaml
-from cryptography.fernet import Fernet
 
 from hypergo.custom_types import JsonType, TypedDictType
 
 
 def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
     def wrapper(value: Any, *args: Tuple[Any, ...]) -> Any:
         handlers: Dict[type, Callable[[Any], Any]] = {
             dict: lambda _dict, *args: {wrapper(key, *args): wrapper(val, *args) for key, val in _dict.items()},
@@ -30,23 +27,11 @@ def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def root_node(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
-    def wrapper(value: Any, key: str, *args: Tuple[Any, ...]) -> Any:
-        return func({"__root__": value}, f"__root__.{key}" if key else "__root__", *args).get("__root__")
-
-    return wrapper
-
-
 class Utility:
-    @staticmethod
-    def deep_has(dic: Union[TypedDictType, Dict[str, Any]], key: str) -> bool:
-        return pydash.has(dic, key)
-
     @staticmethod
     def deep_get(dic: Union[TypedDictType, Dict[str, Any]], key: str, default_sentinel: Optional[Any] = object) -> Any:
         if not pydash.has(dic, key) and default_sentinel == object:
-            raise KeyError(f"Spec \"{key}\" not found in the dictionary {str(dic)}")
+            raise KeyError(f"Spec \"{key}\" not found in the dictionary {json.dumps(dic)}")
         return pydash.get(dic, key, default_sentinel)
 
     @staticmethod
@@ -115,9 +100,8 @@ class Utility:
         return cast(JsonType, json.loads(string))
 
     @staticmethod
-    @root_node
     @traverse_datastructures
-    def serialize(obj: Any, key: Optional[str] = None) -> Union[None, bool, int, float, str]:
+    def serialize(obj: Any) -> Union[None, bool, int, float, str]:
         if type(obj) in [None, bool, int, float, str]:
             return cast(Union[None, bool, int, float, str], obj)
 
@@ -127,9 +111,8 @@ class Utility:
         return utfdecoded
 
     @staticmethod
-    @root_node
     @traverse_datastructures
-    def deserialize(serialized: str, key: Optional[str] = None) -> Any:
+    def deserialize(serialized: str) -> Any:
         if not serialized:
             return serialized
         try:
@@ -141,57 +124,25 @@ class Utility:
             return serialized
 
     @staticmethod
-    @root_node
     def compress(data: Any, key: Optional[str] = None) -> Any:
-        if not key:
-            return base64.b64encode(lzma.compress(json.dumps(data).encode("utf-8"))).decode("utf-8")
-
+        root_data = {"root": data}
+        root_key = f"root.{key}" if key else "root"
         Utility.deep_set(
-            data,
-            key,
-            base64.b64encode(lzma.compress(json.dumps(Utility.deep_get(data, key)).encode("utf-8"))).decode("utf-8"),
+            root_data,
+            root_key,
+            base64.b64encode(lzma.compress(json.dumps(Utility.deep_get(root_data, root_key)).encode("utf-8"))).decode(
+                "utf-8"
+            ),
         )
         return data
 
     @staticmethod
-    @root_node
-    def uncompress(data: Any, key: Optional[str] = None) -> Any:
-        if not key:
-            return json.loads(lzma.decompress(base64.b64decode(data)).decode("utf-8"))
-
+    def uncompress(compressed_data: Any, key: Optional[str] = None) -> Any:
+        root_data = {"root": compressed_data}
+        root_key = f"root.{key}" if key else "root"
         Utility.deep_set(
-            data,
-            key,
-            json.loads(lzma.decompress(base64.b64decode(Utility.deep_get(data, key))).decode("utf-8")),
+            root_data,
+            root_key,
+            json.loads(lzma.decompress(base64.b64decode(Utility.deep_get(root_data, root_key))).decode("utf-8")),
         )
-        return data
-
-    @staticmethod
-    @root_node
-    def encrypt(data: Any, key: str, encryptkey: str) -> Any:
-        key_bytes = encryptkey.encode("utf-8")
-        data_bytes = Utility.stringify(Utility.deep_get(data, key)).encode("utf-8")
-        encrypted_bytes = Fernet(key_bytes).encrypt(data_bytes)
-        encrypted = encrypted_bytes.decode("utf-8")
-        Utility.deep_set(data, key, encrypted)
-        return data
-
-    @staticmethod
-    @root_node
-    def decrypt(encrypted_data: Any, key: str, encryptkey: str) -> Any:
-        key_bytes = encryptkey.encode("utf-8")
-        encrypted_bytes = Utility.deep_get(encrypted_data, key).encode("utf-8")
-        decrypted_bytes = Fernet(key_bytes).decrypt(encrypted_bytes)
-        decrypted = decrypted_bytes.decode("utf-8")
-        Utility.deep_set(encrypted_data, key, Utility.objectify(decrypted))
-        return encrypted_data
-
-    @staticmethod
-    def generate_fernet_key() -> bytes:
-        # Generate a random 32-byte key
-        key = Fernet.generate_key()
-        # Ensure the key is URL-safe base64 encoded and exactly 32 bytes long
-        if len(key) != 44:
-            raise ValueError("Failed to generate a valid Fernet key.")
-        url_safe_key = base64.urlsafe_b64encode(key)
-        return url_safe_key
+        return compressed_data

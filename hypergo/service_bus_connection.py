@@ -7,7 +7,7 @@ from hypergo.message import MessageType
 from hypergo.storage import Storage
 
 
-class Connection(ABC):
+class ServiceBusConnection(ABC):
     def general_consume(self, message: MessageType, config: ConfigType, storage: Union[Storage, None]) -> None:
         executor: Executor = Executor(config, storage)
         for execution in executor.execute(message):
