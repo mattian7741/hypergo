@@ -43,14 +43,22 @@ def deep_set(data: Union[List[Any], Dict[str, Any]], key: str, val: Any) -> Unio
     glom.assign(data, key, val, missing=dict)
     return data
 
+<<<<<<< HEAD
 def deep_unset(data: Dict[str, Any], key: str) -> None:
+=======
+def deep_unset(data: Union[List[Any], Dict[str, Any]], key: str) -> None:
+>>>>>>> c415267 (refactor initial commit)
     tokens: List[Any] = key.split(".")
     deep_key: str = ".".join(tokens[:-1])
     del_key: str = tokens[-1]
     if not deep_key:
         del data[del_key]
     else:
+<<<<<<< HEAD
         obj: Dict[str, Any] = deep_get(data, deep_key)
+=======
+        obj: Union[List[Any], Dict[str, Any]] = deep_get(data, deep_key)
+>>>>>>> c415267 (refactor initial commit)
         del obj[del_key]
 
 def unique_identifier(prefix: str = "") -> str:
