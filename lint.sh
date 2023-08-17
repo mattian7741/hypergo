@@ -36,7 +36,7 @@ pycodestyle --ignore=E501 --first $mod
 if [ $? -ne 0 ]; then { printf "\e[31mFailed, aborting.\e[0m\n" ; exit 1; } fi
 
 printf "\e[1mType Checking (mypy) $mod ...\e[0m\n"
-mypy --strict --explicit-package-bases --ignore-missing-imports $mod
+mypy --pretty --strict --explicit-package-bases --ignore-missing-imports $mod
 if [ $? -ne 0 ]; then { printf "\e[31mFailed, aborting.\e[0m\n" ; exit 1; } fi
 
 printf "\e[1mComplexity check $mod ...\e[0m\n"
