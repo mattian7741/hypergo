@@ -4,13 +4,6 @@ from typing import Any, Callable, TypeVar
 from hypergo.storage import Storage
 from hypergo.utility import Utility
 
-def addsubfolder(func: Callable[..., Any]) -> Callable[..., Any]:
-    @wraps(func)
-    def wrapper(self: Any, file_name: str, *args: Any) -> Any:
-        return func(self, f".hypergo_storage/{file_name}", *args)
-
-    return wrapper
-
 T = TypeVar("T")
 
 def addsubfolder(func: Callable[..., T]) -> Callable[..., T]:

@@ -215,23 +215,6 @@ def exceptions(func: Callable[..., Generator[Any, None, None]]) -> Callable[...,
 def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
     count = trans.get("count", 1)
     trans.set("count", count + 1)
-        yield from (_.deep_get(result, "message") for result in func(the_context, *args, **kwargs))
-    return wrapper
-
-
-def exceptions(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
-    @wraps(func)
-    def wrapper(*args: Any, **kwargs: Any) ->Generator[Any, None, None]:
-        try:
-            yield from func(*args, **kwargs)
-        except Exception as exc: # pylint: disable=broad-except
-            print(exc)
-    return wrapper
-
-################################################################################
-def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
-    count = trans.get("count", 1)
-    trans.set("count", count + 1)
     result: float = farfunc(float1, float2) / count
     return result
 
