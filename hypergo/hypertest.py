@@ -120,11 +120,7 @@ def serialization(func: Callable[..., Generator[Any, None, None]]) -> Callable[.
 
 def chunker(collection: Any, chunk_size: int=1) -> Generator[List[Any], None, None]:
     chunk = []
-<<<<<<< HEAD
     for item in [collection, [collection]][not _.is_array(collection)]:
-=======
-    for item in [collection, [collection]][not(_.is_array(collection))]:
->>>>>>> c415267 (refactor initial commit)
         chunk.append(item)
         if len(chunk) >= chunk_size:
             yield chunk
@@ -141,11 +137,7 @@ def chunking(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., G
     return wrapper
 
 def streamer(collection: Any) -> Generator[Any, None, None]:
-<<<<<<< HEAD
     yield from (item for item in [collection, [collection]][not _.is_array(collection)])
-=======
-    yield from (item for item in [collection, [collection]][not(_.is_array(collection))])
->>>>>>> c415267 (refactor initial commit)
 
 def streaming(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
     @wraps(func)
@@ -183,14 +175,8 @@ def transactions(func: Callable[..., Generator[Any, None, None]]) -> Callable[..
     return wrapper
 
 def load_transaction(data: Any, storage: Storage) -> Any:
-<<<<<<< HEAD
     txkey: str = _.deep_get(data, "message.transaction", None)
     transaction: Transaction = Transaction.from_str(storage.load(txkey)) if txkey else Transaction()
-=======
-    transaction: Transaction = None
-    txkey: str = _.deep_get(data, "message.transaction", None)
-    transaction = Transaction.from_str(storage.load(txkey)) if txkey else Transaction()
->>>>>>> c415267 (refactor initial commit)
     return _.deep_set(data, "transaction", transaction)
 
 def save_transaction(data: Any, storage: Storage) -> Any:
@@ -199,22 +185,11 @@ def save_transaction(data: Any, storage: Storage) -> Any:
     storage.save(txkey, str(transaction))
     return _.deep_set(data, "message.transaction", txkey)
 
-<<<<<<< HEAD
 def substitutions(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) ->Generator[Any, None, None]:
         results = func(handle_substitution(data, data), *args, **kwargs)
         for result in results:
-=======
-
-def substitutions(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
-    @wraps(func)
-    def wrapper(data: Any, *args: Any, **kwargs: Any) ->Generator[Any, None, None]:
-        # print(data)
-        results = func(handle_substitution(data, data), *args, **kwargs)
-        for result in results:
-            # print(result)
->>>>>>> c415267 (refactor initial commit)
             yield handle_substitution(result, result)
     return wrapper
 
@@ -223,7 +198,6 @@ def contextualize(func: Callable[..., Generator[Any, None, None]]) -> Callable[.
     def wrapper(data: Any, *args: Any, **kwargs: Any) ->Generator[Any, None, None]:
         # _.deep_set(the_context, "input", data)
         _.deep_set(the_context, "message", data)
-<<<<<<< HEAD
         yield from (_.deep_get(result, "message") for result in func(the_context, *args, **kwargs))
     return wrapper
 
@@ -241,17 +215,23 @@ def exceptions(func: Callable[..., Generator[Any, None, None]]) -> Callable[...,
 def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
     count = trans.get("count", 1)
     trans.set("count", count + 1)
-=======
-        yield from (_.deep_get(result, "message") for result in func(the_context))
+        yield from (_.deep_get(result, "message") for result in func(the_context, *args, **kwargs))
     return wrapper
 
 
+def exceptions(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) ->Generator[Any, None, None]:
+        try:
+            yield from func(*args, **kwargs)
+        except Exception as exc: # pylint: disable=broad-except
+            print(exc)
+    return wrapper
 
 ################################################################################
-def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, tx: Transaction) -> float:
-    count = tx.get("count", 1)
-    tx.set("count", count + 1)
->>>>>>> c415267 (refactor initial commit)
+def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
+    count = trans.get("count", 1)
+    trans.set("count", count + 1)
     result: float = farfunc(float1, float2) / count
     return result
 
@@ -282,17 +262,11 @@ the_context: Dict[str, Any] = {
 
 ################################################################################
 
-<<<<<<< HEAD
 @exceptions
 # @unbatching
 # @batching
 @contextualize
 @substitutions
-=======
-# @unbatching
-# @batching
-@contextualize
->>>>>>> c415267 (refactor initial commit)
 @passbyreference
 @encryption
 @compression
@@ -310,10 +284,6 @@ def execute(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
         # print(result)
         yield result
 
-<<<<<<< HEAD
-=======
-
->>>>>>> c415267 (refactor initial commit)
 def main() -> None:
     # message = {
     #     "transaction": "transactionkey_202308161628349844546ab7b199",
@@ -349,11 +319,7 @@ def main() -> None:
     compressed_message = _.compress(serialized_message, "body")
     encrypted_message = _.encrypt(compressed_message, "body", ENCRYPTIONKEY)
     stored_message = storebyreference(encrypted_message, "body", the_storage.use_sub_path("passbyreference"))
-<<<<<<< HEAD
     import json # pylint: disable=import-outside-toplevel
-=======
-    import json
->>>>>>> c415267 (refactor initial commit)
     for i in execute(stored_message):
         loaded_message = fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
         unencrypted = _.decrypt(loaded_message, "body", ENCRYPTIONKEY)
