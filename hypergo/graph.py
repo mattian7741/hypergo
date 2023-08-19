@@ -141,4 +141,4 @@ def graph(rks: List[str], folders: List[str]) -> None:
     for edge in edges:
         dot.edge(*edge, color="#ffffff88", arrowsize="1.0", minlen="3")
 
-    dot.render(".graph.gv", view=True)
+    dot.render("./.hypergo_storage/graph/.graph.gv", view=True)
