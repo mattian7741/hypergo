@@ -43,14 +43,14 @@ def deep_set(data: Union[List[Any], Dict[str, Any]], key: str, val: Any) -> Unio
     glom.assign(data, key, val, missing=dict)
     return data
 
-def deep_unset(data: Union[List[Any], Dict[str, Any]], key: str) -> None:
+def deep_unset(data: Dict[str, Any], key: str) -> None:
     tokens: List[Any] = key.split(".")
     deep_key: str = ".".join(tokens[:-1])
     del_key: str = tokens[-1]
     if not deep_key:
         del data[del_key]
     else:
-        obj: Union[List[Any], Dict[str, Any]] = deep_get(data, deep_key)
+        obj: Dict[str, Any] = deep_get(data, deep_key)
         del obj[del_key]
 
 def unique_identifier(prefix: str = "") -> str:
@@ -145,7 +145,7 @@ def decrypt(encrypted_data: Any, key: str, encryptkey: str) -> Any:
     deep_set(encrypted_data, key, objectify(decrypted))
     return encrypted_data
 
-def is_array(obj):
+def is_array(obj: Any) -> bool:
     return isinstance(obj, (list, set, tuple, types.GeneratorType))
 
 def safecast(expected_type: type, provided_value: Any) -> Any:
