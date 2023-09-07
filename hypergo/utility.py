@@ -147,7 +147,7 @@ class Utility:  # pylint: disable=too-many-public-methods
     @root_node
     @traverse_datastructures
     def serialize(obj: Any, key: Optional[str] = None) -> Any:
-        if type(obj) in [None, bool, int, float, str]:
+        if not obj or type(obj) in [bool, int, float, str]:
             return cast(Union[None, bool, int, float, str], obj)
 
         try:
