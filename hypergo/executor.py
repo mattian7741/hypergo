@@ -150,15 +150,14 @@ class Executor:
         context["config"] = do_substitution(context["config"], cast(Dict[str, Any], context))
         args: List[Any] = self.get_args(context)
         execution: Any = self._func_spec(*args)
-        output_routing_key: str = self.get_output_routing_keys(Utility.deep_get(context, "message.routingkey")) #  keys
+        output_routing_keys: str = self.get_output_routing_keys(Utility.deep_get(context, "message.routingkey"))
 
         if not inspect.isgenerator(execution):
             execution = [execution]
         for return_value in execution:
             # if not return_value:
             #     continue
-            for key in keys: 
-                
+            for output_routing_key in output_routing_keys:
                 output_message: MessageType = {
                     "routingkey": output_routing_key,
                     "body": {},
