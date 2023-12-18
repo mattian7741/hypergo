@@ -122,6 +122,22 @@ class Executor:
 
         token: str = self.organize_tokens(tokens)
         return self.organize_tokens(re.sub(r"(?<=\.)\?(?=\.)|^\?|(?<=\.)\?$|^\?$", token, output_message_routing_key))
+    
+    def get_output_message(self, context: Any, cfg: ConfigType, input_routingkey: str, output_key: str, output_binding: str, value: Any) -> MessageType:
+            output_routing_key: str = self.get_output_routing_key(input_routingkey, output_key)
+
+            output_message: MessageType = {
+                "routingkey": output_routing_key,
+                "body": {},
+                "transaction": Utility.deep_get(context, "transaction"),
+                # "__txid__": Utility.deep_get(context, "message.__txid__"),
+            }
+
+            output_context: ContextType = {"message": output_message, "config": cfg}
+
+            Utility.deep_set(output_context, output_binding, value)
+
+            return output_message
 
     @configsubstitution
     @Transform.operation("pass_by_reference")
@@ -131,14 +147,6 @@ class Executor:
     @Transform.operation("serialization")
     @Transform.operation("contextualization")
     def execute(self, context: Any) -> Generator[MessageType, None, None]:
-        def handle_tuple(dst: ContextType, src: Any) -> None:
-            for binding, tuple_elem in zip(self._config["output_bindings"], src):
-                Utility.deep_set(dst, binding, tuple_elem)
-
-        def handle_default(dst: ContextType, src: Any) -> None:
-            for binding in self._config["output_bindings"]:
-                Utility.deep_set(dst, binding, src)
-
         # This mutates config with substitutions - not necessary for input binding substitution
         # Unclear which approach is better - do we want the original config with references?  Or
         # Do we want to mutate config and replace values with substitutions?
@@ -149,33 +157,28 @@ class Executor:
         execution: Any = self._func_spec(*args)
         input_routingkey = Utility.deep_get(context, "message.routingkey")
 
-        
-
         if not inspect.isgenerator(execution):
             execution = [execution]
         for return_value in execution:
-          for output_key, output_binding, return_element in zip(self._config["output_keys"], self._config["output_bindings"], return_value):
-            output_routing_key: str = self.get_output_routing_key(input_routingkey, output_key)
-
-            output_message: MessageType = {
-                "routingkey": output_routing_key,
-                "body": {},
-                "transaction": Utility.deep_get(context, "message.transaction"),
-                # "__txid__": Utility.deep_get(context, "message.__txid__"),
-            }
-
-
-
             if isinstance(return_value, tuple):
-                handle_tuple(output_context, return_value)
+                for output_key, output_binding, return_element in zip(self._config["output_keys"], self._config["output_bindings"], return_value):
+                    yield self.get_output_message(
+                        context=context,
+                        cfg=self._config,
+                        input_routingkey=input_routingkey,
+                        output_key=output_key,
+                        output_binding=output_binding,
+                        return_element=return_element
+                    )
             else:
-                handle_default(output_context, return_value)
-
-
-
-            output_context: ContextType = {"message": output_message, "config": self._config}
-
-            yield output_message
+                yield self.get_output_message(
+                        context=context,
+                        cfg=self._config,
+                        input_routingkey=input_routingkey,
+                        output_key=self._config["output_keys"][0],
+                        output_binding=self._config["output_bindings"][0],
+                        return_element=return_value
+                    )
 
     def organize_tokens(self, keys: List[str]) -> str:
         return ".".join(sorted(set(".".join(keys).split("."))))

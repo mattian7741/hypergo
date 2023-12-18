@@ -10,14 +10,7 @@ from hypergo.config import ConfigType
 from hypergo.executor import Executor
 
 
-class TestOutputRoutingKey(unittest.TestCase):
-    def setUp(self) -> None:
-        self.message: MessageType = {
-        "body": [{"name": "Chris", "company": "LinkLogistics"}],
-        "routingkey": "a.b.c.x"
-        }
-        return super().setUp()
-    
+class TestOutputRoutingKey(unittest.TestCase):    
     def test_get_output_routing_key(self):
         cfg: ConfigType = {
                             "namespace": "datalink",
