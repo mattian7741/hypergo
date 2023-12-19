@@ -168,7 +168,7 @@ class Executor:
                         input_routingkey=input_routingkey,
                         output_key=output_key,
                         output_binding=output_binding,
-                        return_element=return_element
+                        value=return_element
                     )
             else:
                 yield self.get_output_message(
@@ -177,7 +177,7 @@ class Executor:
                         input_routingkey=input_routingkey,
                         output_key=self._config["output_keys"][0],
                         output_binding=self._config["output_bindings"][0],
-                        return_element=return_value
+                        value=return_value
                     )
 
     def organize_tokens(self, keys: List[str]) -> str:

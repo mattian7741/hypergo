@@ -17,16 +17,19 @@ class TestOutputRoutingKey(unittest.TestCase):
                             "name": "snowflakedbexecutor",
                             "package": "ldp-dbexecutor",
                             "lib_func": "dbexecutor.snowflake_db_executor.__main__.execute",
-                            "input_keys": ["a.b.c", "a.b.d", "a.b", "a"],
+                            "input_keys": ["aaa.b.c", "a.b.d", "a.b", "a"],
                             "output_keys": ["y.h.?.?"],
                             "input_bindings": ["message.body"],
                             "output_bindings": ["message.body"]
                         }
         executor = Executor(cfg)
-        routingkey = "a.b.c.x"
+        routingkey = "aaa.b.c.x"
         output_key = "y.h.?.?"
         expected_output_routing_key = ".b.c.h.x.y"
         self.assertEqual(executor.get_output_routing_key(routingkey, output_key), expected_output_routing_key)
+
+
+# Something is wrong here
 
 if __name__ == '__main__':
     unittest.main()
