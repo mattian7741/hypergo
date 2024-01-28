@@ -281,7 +281,6 @@ def main() -> None:
     # }
 
     message = {
-        "transaction": "transactionkey_202308161628349844546ab7b199",
         "routingkey": "x.y.z",
         "body": {
             "a": {
