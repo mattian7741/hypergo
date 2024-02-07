@@ -1,19 +1,23 @@
 
-import pydash
-import glom
-import hashlib
-import json
-import dill
 import base64
 import binascii
+import hashlib
 import inspect
+import json
 import lzma
 import types
 import uuid as uuid_lib
 from datetime import datetime
-from cryptography.fernet import Fernet
-from typing import cast, get_origin, Any, Callable, Dict, List, Optional, Tuple, Union
 from functools import wraps
+from typing import (Any, Callable, Dict, List, Mapping, Optional, Tuple, Union,
+                    cast, get_origin)
+
+import dill
+import glom
+import pydash
+from cryptography.fernet import Fernet
+import yaml
+
 
 def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
@@ -147,6 +151,14 @@ def decrypt(encrypted_data: Any, key: str, encryptkey: str) -> Any:
 
 def is_array(obj: Any) -> bool:
     return isinstance(obj, (list, set, tuple, types.GeneratorType))
+
+def json_read(file_name: str) -> Mapping[str, Any]:
+    with open(file_name, "r", encoding="utf-8") as file_handle:
+        return cast(Mapping[str, Any], json.load(file_handle))
+    
+def yaml_read(file_name: str) -> Mapping[str, Any]:
+    with open(file_name, "r", encoding="utf-8") as file_handle:
+        return cast(Mapping[str, Any], yaml.safe_load(file_handle))
 
 def safecast(expected_type: type, provided_value: Any) -> Any:
     ret: Any = provided_value

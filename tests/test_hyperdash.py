@@ -1,6 +1,18 @@
 import unittest
 
 import hypergo.hyperdash as _
+import os
+import sys
+import unittest
+from unittest.mock import MagicMock
+
+from typing import Dict
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.dirname(SCRIPT_DIR))
+
+import json
+import yaml
 
 
 class TestSerialization(unittest.TestCase):
@@ -168,6 +180,104 @@ def get_fixture():
         "bytes": b"hello",  # Sample bytes
     }
 
+class TestDeepGet(unittest.TestCase):
+    def test_key_exists(self) -> None:
+        input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
+        key: str = "abc.def"
+        expected_output: int = 1
+        self.assertEqual(_.deep_get(input_dict, key), expected_output)
+
+    def test_periods(self) -> None:
+        input_dict: Dict[str, Dict[str, int]] = {"abc.def": 1}
+        key: str = "abc.def"
+        expected_output: int = 1
+        self.assertEqual(_.deep_get(input_dict, key.replace('.', '\\.')), expected_output)
+
+    def test_key_does_not_exist(self) -> None:
+        input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
+        key: str = "abc.ghi"
+        with self.assertRaises(KeyError):
+            _.deep_get(input_dict, key)
+
+class TestDeepSet(unittest.TestCase):
+    def test_key_exists(self) -> None:
+        input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
+        key: str = "abc.def"
+        val: int = 2
+        expected_output: Dict[str, Dict[str, int]] = {"abc": {"def": 2}}
+        _.deep_set(input_dict, key, val)
+        self.assertEqual(input_dict, expected_output)
+
+    def test_key_does_not_exist(self) -> None:
+        input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
+        key: str = "abc.ghi"
+        val: int = 2
+        expected_output: Dict[str, Dict[str, int]] = {"abc": {"def": 1, "ghi": 2}}
+        _.deep_set(input_dict, key, val)
+        self.assertEqual(input_dict, expected_output)
+
+class TestYamlRead(unittest.TestCase):
+    def test_yaml_read(self) -> None:
+        # Mock the yaml.safe_load method
+        yaml.safe_load = MagicMock(return_value={"a": 1})
+        file_name: str = "tests/test.yaml"
+        expected_output: Dict[str, int] = {"a": 1}
+        self.assertEqual(_.yaml_read(file_name), expected_output)
+
+class TestYamlWrite(unittest.TestCase):
+    def test_yaml_write(self) -> None:
+        # TODO: Implement test case for yaml_write method
+        pass
+
+class TestJsonRead(unittest.TestCase):
+    def test_json_read(self) -> None:
+        # Mock the json.load method
+        json.load = MagicMock(return_value={"a": 1})
+        file_name: str = "tests/test.json"
+        expected_output: Dict[str, int] = {"a": 1}
+        self.assertEqual(_.json_read(file_name), expected_output)
+
+class TestJsonWrite(unittest.TestCase):
+    def test_json_write(self) -> None:
+        # TODO: Implement test case for json_write method
+        pass
+
+class TestHash(unittest.TestCase):
+    def test_hash(self) -> None:
+        content: str = "test content"
+        expected_output: str = "9473fdd0d880a43c21b7778d34872157"
+        self.assertEqual(_.hash(content), expected_output)
+
+class TestSafeCast(unittest.TestCase):
+    def test_int(self) -> None:
+        expected_output: int = 1
+        provided_value: str = "1"
+        value_type: type = int
+        self.assertEqual(_.safecast(value_type, provided_value), expected_output)
+
+    def test_float(self) -> None:
+        expected_output: float = 1.0
+        provided_value: int = 1
+        value_type: type = float
+        self.assertEqual(_.safecast(value_type, provided_value), expected_output)
+
+    def test_str(self) -> None:
+        expected_output: str = "1"
+        provided_value: int = 1
+        value_type: type = str
+        self.assertEqual(_.safecast(value_type, provided_value), expected_output)
+
+    def test_meta(self) -> None:
+        from abc import ABC
+        class TestClass(ABC):
+            pass
+        class TestSubClass(TestClass):
+            pass
+        test_sub_class: TestSubClass = TestSubClass()
+        expected_output: TestClass = test_sub_class
+        provided_value: TestSubClass = test_sub_class
+        value_type: ABC.Meta = TestClass
+        self.assertEqual(_.safecast(value_type, provided_value), expected_output)
 
 if __name__ == "__main__":
     unittest.main()
