@@ -1,8 +1,9 @@
 import unittest
-from hypergo.utility import Utility
 
-class TestUtility(unittest.TestCase):
+import hypergo.hyperdash as _
 
+
+class TestSerialization(unittest.TestCase):
     def test_scalar_values(self):
         # Test scalar values (str, int, float, bool, None)
         test_values = [
@@ -14,22 +15,21 @@ class TestUtility(unittest.TestCase):
         ]
         for py_value, json_value in test_values:
             with self.subTest(py_value=py_value):
-                self.assertEqual(Utility.deserialize(Utility.serialize(py_value)), json_value)
+                self.assertEqual(
+                    _.deserialize(_.serialize(py_value, None), None), json_value
+                )
 
     def test_nested_dicts_and_lists(self):
         # Test nested dicts and lists
         test_dict = {
             "name": "John",
             "age": 30,
-            "address": {
-                "city": "New York",
-                "zip_code": 10001
-            },
-            "hobbies": ["Reading", "Hiking"]
+            "address": {"city": "New York", "zip_code": 10001},
+            "hobbies": ["Reading", "Hiking"],
         }
 
-        json_dict = Utility.serialize(test_dict)
-        restored_dict = Utility.deserialize(json_dict)
+        json_dict = _.serialize(test_dict, None)
+        restored_dict = _.deserialize(json_dict, None)
         self.assertEqual(restored_dict, test_dict)
 
     def test_singular_function(self):
@@ -37,8 +37,8 @@ class TestUtility(unittest.TestCase):
         def add(x, y):
             return x + y
 
-        json_func = Utility.serialize(add)
-        restored_func = Utility.deserialize(json_func)
+        json_func = _.serialize(add, None)
+        restored_func = _.deserialize(json_func, None)
         self.assertEqual(restored_func(3, 4), 7)
 
     def test_singular_class(self):
@@ -51,8 +51,8 @@ class TestUtility(unittest.TestCase):
                 return f"Hello, {self.name}!"
 
         instance = TestClass("Alice")
-        json_instance = Utility.serialize(instance)
-        restored_instance = Utility.deserialize(json_instance)
+        json_instance = _.serialize(instance, None)
+        restored_instance = _.deserialize(json_instance, None)
 
         self.assertEqual(restored_instance.greet(), "Hello, Alice!")
 
@@ -62,9 +62,41 @@ class TestUtility(unittest.TestCase):
         comprehensive_dict = get_fixture()
 
         # Test serialization and deserialization of the comprehensive dictionary
-        json_comprehensive = Utility.serialize(comprehensive_dict)
-        restored_comprehensive = Utility.deserialize(json_comprehensive)
-        self.assertEqual(restored_comprehensive, comprehensive_dict)
+        json_comprehensive = _.serialize(comprehensive_dict, None)
+        restored_comprehensive = _.deserialize(json_comprehensive, None)
+
+        self.assertEqual(
+            comprehensive_dict["function"](4), restored_comprehensive["function"](4)
+        )
+
+        comprehensive_dict.pop("function")
+        restored_comprehensive.pop("function")
+
+        comprehensive_instance = comprehensive_dict["instance"]
+        restored_instance = restored_comprehensive["instance"]
+
+        self.assertEqual(comprehensive_instance.greet(), restored_instance.greet())
+
+        comprehensive_dict.pop("instance")
+        restored_comprehensive.pop("instance")
+
+        comprehensive_instantiated_class_instance = comprehensive_dict["class"](
+            "testiboi"
+        )
+        restored_instantiated_class_instance = restored_comprehensive["class"](
+            "testiboi"
+        )
+
+        self.assertEqual(
+            comprehensive_instantiated_class_instance.greet(),
+            restored_instantiated_class_instance.greet(),
+        )
+
+        comprehensive_dict.pop("class")
+        restored_comprehensive.pop("class")
+
+        self.assertDictEqual(restored_comprehensive, comprehensive_dict)
+
 
 def get_fixture():
     # Importing required modules for binary data and bytes
@@ -135,6 +167,7 @@ def get_fixture():
         "binary_data": binary_data,  # Sample binary data
         "bytes": b"hello",  # Sample bytes
     }
+
 
 if __name__ == "__main__":
     unittest.main()
