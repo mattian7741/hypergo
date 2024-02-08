@@ -206,7 +206,7 @@ class TestDeepSet(unittest.TestCase):
         val: int = 2
         expected_output: Dict[str, Dict[str, int]] = {"abc": {"def": 2}}
         _.deep_set(input_dict, key, val)
-        self.assertEqual(input_dict, expected_output)
+        self.assertDictEqual(input_dict, expected_output)
 
     def test_key_does_not_exist(self) -> None:
         input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
@@ -214,7 +214,17 @@ class TestDeepSet(unittest.TestCase):
         val: int = 2
         expected_output: Dict[str, Dict[str, int]] = {"abc": {"def": 1, "ghi": 2}}
         _.deep_set(input_dict, key, val)
-        self.assertEqual(input_dict, expected_output)
+        self.assertDictEqual(input_dict, expected_output)
+
+    def test_deep_key(self) -> None:
+        input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": {"ghi": 1}, "jkl": 2}}
+        key: str = "abc.def"
+        val: int = 3
+        expected_output = {"abc": {"jkl": 2, "def": 3}}
+        
+        actual_output = _.deep_set(input_dict, key, val)
+
+        self.assertDictEqual(actual_output, expected_output)
 
 class TestYamlRead(unittest.TestCase):
     def test_yaml_read(self) -> None:
@@ -278,6 +288,28 @@ class TestSafeCast(unittest.TestCase):
         provided_value: TestSubClass = test_sub_class
         value_type: ABC.Meta = TestClass
         self.assertEqual(_.safecast(value_type, provided_value), expected_output)
+
+class TestCompress(unittest.TestCase):
+    def test_compress_no_key(self):
+        result = _.compress({"abc": "def"})
+
+        self.assertEqual(result, "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla")
+        
+    def test_compress_with_key(self):
+        result = _.compress({"abc": {"def": {"ghi": 1}, "jkl": 2}}, "abc.def")
+
+        self.assertEqual(result, {"abc": {"def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=", "jkl": 2}})
+
+class TestUncompress(unittest.TestCase):
+    def test_uncompress_no_key(self):
+        result = _.uncompress("/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla")
+
+        self.assertEqual(result, {"abc": "def"})
+        
+    def test_uncompress_with_key(self):
+        result = _.uncompress({"abc": {"def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=", "jkl": 2}}, "abc.def")
+
+        self.assertEqual(result, {"abc": {"def": {"ghi": 1}, "jkl": 2}})
 
 if __name__ == "__main__":
     unittest.main()

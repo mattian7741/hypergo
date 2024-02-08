@@ -33,7 +33,7 @@ def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def root_node(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
-    def wrapper(value: Any, key: str, *args: Tuple[Any, ...]) -> Any:
+    def wrapper(value: Any, key: Optional[str] = None, *args: Tuple[Any, ...]) -> Any:
         return func({"__root__": value}, f"__root__.{key}" if key else "__root__", *args).get("__root__")
 
     return wrapper
