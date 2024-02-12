@@ -1,17 +1,16 @@
-import unittest
-
-import hypergo.hyperdash as _
 import os
 import sys
 import unittest
+from typing import Dict
 from unittest.mock import MagicMock
 
-from typing import Dict
+import hypergo.hyperdash as _
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 import json
+
 import yaml
 
 
@@ -180,6 +179,7 @@ def get_fixture():
         "bytes": b"hello",  # Sample bytes
     }
 
+
 class TestDeepGet(unittest.TestCase):
     def test_key_exists(self) -> None:
         input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
@@ -191,13 +191,16 @@ class TestDeepGet(unittest.TestCase):
         input_dict: Dict[str, Dict[str, int]] = {"abc.def": 1}
         key: str = "abc.def"
         expected_output: int = 1
-        self.assertEqual(_.deep_get(input_dict, key.replace('.', '\\.')), expected_output)
+        self.assertEqual(
+            _.deep_get(input_dict, key.replace(".", "\\.")), expected_output
+        )
 
     def test_key_does_not_exist(self) -> None:
         input_dict: Dict[str, Dict[str, int]] = {"abc": {"def": 1}}
         key: str = "abc.ghi"
         with self.assertRaises(KeyError):
             _.deep_get(input_dict, key)
+
 
 class TestDeepSet(unittest.TestCase):
     def test_key_exists(self) -> None:
@@ -221,10 +224,11 @@ class TestDeepSet(unittest.TestCase):
         key: str = "abc.def"
         val: int = 3
         expected_output = {"abc": {"jkl": 2, "def": 3}}
-        
+
         actual_output = _.deep_set(input_dict, key, val)
 
         self.assertDictEqual(actual_output, expected_output)
+
 
 class TestYamlRead(unittest.TestCase):
     def test_yaml_read(self) -> None:
@@ -234,10 +238,12 @@ class TestYamlRead(unittest.TestCase):
         expected_output: Dict[str, int] = {"a": 1}
         self.assertEqual(_.yaml_read(file_name), expected_output)
 
+
 class TestYamlWrite(unittest.TestCase):
     def test_yaml_write(self) -> None:
         # TODO: Implement test case for yaml_write method
         pass
+
 
 class TestJsonRead(unittest.TestCase):
     def test_json_read(self) -> None:
@@ -247,16 +253,19 @@ class TestJsonRead(unittest.TestCase):
         expected_output: Dict[str, int] = {"a": 1}
         self.assertEqual(_.json_read(file_name), expected_output)
 
+
 class TestJsonWrite(unittest.TestCase):
     def test_json_write(self) -> None:
         # TODO: Implement test case for json_write method
         pass
+
 
 class TestHash(unittest.TestCase):
     def test_hash(self) -> None:
         content: str = "test content"
         expected_output: str = "9473fdd0d880a43c21b7778d34872157"
         self.assertEqual(_.hash(content), expected_output)
+
 
 class TestSafeCast(unittest.TestCase):
     def test_int(self) -> None:
@@ -279,37 +288,64 @@ class TestSafeCast(unittest.TestCase):
 
     def test_meta(self) -> None:
         from abc import ABC
+
         class TestClass(ABC):
             pass
+
         class TestSubClass(TestClass):
             pass
+
         test_sub_class: TestSubClass = TestSubClass()
         expected_output: TestClass = test_sub_class
         provided_value: TestSubClass = test_sub_class
         value_type: ABC.Meta = TestClass
         self.assertEqual(_.safecast(value_type, provided_value), expected_output)
 
+
 class TestCompress(unittest.TestCase):
     def test_compress_no_key(self):
         result = _.compress({"abc": "def"})
 
-        self.assertEqual(result, "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla")
-        
+        self.assertEqual(
+            result,
+            "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla",
+        )
+
     def test_compress_with_key(self):
         result = _.compress({"abc": {"def": {"ghi": 1}, "jkl": 2}}, "abc.def")
 
-        self.assertEqual(result, {"abc": {"def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=", "jkl": 2}})
+        self.assertEqual(
+            result,
+            {
+                "abc": {
+                    "def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=",
+                    "jkl": 2,
+                }
+            },
+        )
+
 
 class TestUncompress(unittest.TestCase):
     def test_uncompress_no_key(self):
-        result = _.uncompress("/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla")
+        result = _.uncompress(
+            "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla"
+        )
 
         self.assertEqual(result, {"abc": "def"})
-        
+
     def test_uncompress_with_key(self):
-        result = _.uncompress({"abc": {"def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=", "jkl": 2}}, "abc.def")
+        result = _.uncompress(
+            {
+                "abc": {
+                    "def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=",
+                    "jkl": 2,
+                }
+            },
+            "abc.def",
+        )
 
         self.assertEqual(result, {"abc": {"def": {"ghi": 1}, "jkl": 2}})
+
 
 if __name__ == "__main__":
     unittest.main()
