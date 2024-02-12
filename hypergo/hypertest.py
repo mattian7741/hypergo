@@ -18,7 +18,7 @@ def generatorize(func: Callable[..., T]) -> Callable[..., Generator[T, None, Non
         return result if inspect.isgenerator(result) else (elem for elem in [result])
     return generator_function
 
-def handle_wildcard(data: Union[List[Any], Dict[str, Any]], input_string: Any) -> str:
+def replace_wildcard_from_routingkey(data: Union[List[Any], Dict[str, Any]], input_string: Any) -> str:
     def find_best_key(field_path: List[str], routingkey: str) -> str:
         rk_set: Set[str] = set(routingkey.split("."))
         matched_key: str = ""
@@ -44,11 +44,11 @@ def handle_substitution(value: Any, data: Dict[str, Any]) -> Any:
         if isinstance(string, str):
             match: Optional[Match[str]] = re.match(r"^{([^}]+)}$", string)
             result = (
-                _.deep_get(data, handle_wildcard(data, match.group(1)), match.group(0))
+                _.deep_get(data, replace_wildcard_from_routingkey(data, match.group(1)), match.group(0))
                 if match
                 else re.sub(
                     r"{([^}]+)}",
-                    lambda match: str(_.deep_get(data, handle_wildcard(data, match.group(1)), "")),
+                    lambda match: str(_.deep_get(data, replace_wildcard_from_routingkey(data, match.group(1)), "")),
                     string,
                 )
             )
