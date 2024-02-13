@@ -1,31 +1,19 @@
 import unittest
-from typing import Any, Callable, Dict
+from typing import Any, Dict
+from unittest import mock
 
 import hypergo.hyperdash as _
-from hypergo import transaction
-from hypergo.hypertest import handle_substitution, replace_wildcard_from_routingkey
+from hypergo.hypertest import (exceptions, handle_substitution,
+                               replace_wildcard_from_routingkey)
 from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
-
-
-def the_function(
-    farfunc: Callable[[float, float], float],
-    float1: float,
-    float2: float,
-    trans: transaction,
-) -> float:
-    count = trans.get("count", 1)
-    trans.set("count", count + 1)
-    result: float = farfunc(float1, float2) / count
-    return result
-
 
 # def the_function(arr: List[Any]) -> float:
 #     print("arr: ", arr)
 #     return 4321
 
 the_config: Dict[str, Any] = {
-    "lib_func": "hypergo.hypertest.the_function",
+    "lib_func": "repo.some.function",
     "input_keys": ["xxx.yyy.zzz", "vvv.uuu.www"],
     "output_keys": ["mmm.nnn.?"],
     "input_bindings": [
@@ -42,7 +30,7 @@ the_config: Dict[str, Any] = {
 # the_generator: Callable[..., Generator[Any, None, None]] = generatorize(the_function)
 the_storage: Storage = LocalStorage()
 the_context: Dict[str, Any] = {
-    "function": the_function,
+    "lib_func": "repo.some.function",
     "storage": the_storage,
     "config": the_config,
     "message": {
@@ -55,7 +43,7 @@ the_context: Dict[str, Any] = {
 class TestReplaceWildcardFromRoutingkey(unittest.TestCase):
     def test_no_wildcard_present(self):
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -79,7 +67,7 @@ class TestReplaceWildcardFromRoutingkey(unittest.TestCase):
 
     def test_single_wildcard_replacement(self):
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -109,7 +97,7 @@ class TestReplaceWildcardFromRoutingkey(unittest.TestCase):
 class TestHandleSubstitutions(unittest.TestCase):
     def test_message_body(self):
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -124,7 +112,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
         expected_output = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -143,7 +131,7 @@ class TestHandleSubstitutions(unittest.TestCase):
 
     def test_custom_properties(self):
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -165,7 +153,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
         expected_output = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -188,7 +176,7 @@ class TestHandleSubstitutions(unittest.TestCase):
 
     def test_custom_properties_with_wildcard(self):
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -210,7 +198,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
         expected_output = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -233,7 +221,7 @@ class TestHandleSubstitutions(unittest.TestCase):
 
     def test_multiple_substitutions(self):
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -255,7 +243,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
         expected_output = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -278,7 +266,7 @@ class TestHandleSubstitutions(unittest.TestCase):
 
     def test_unmatched_substitution(self):  # is this the behavior we want?
         context = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -297,7 +285,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
         expected_output = {
-            "function": the_function,
+            "lib_func": "repo.some.function",
             "storage": the_storage,
             "config": {
                 "lib_func": "hypergo.hypertest.the_function",
@@ -317,6 +305,34 @@ class TestHandleSubstitutions(unittest.TestCase):
         }
 
         self.assertDictEqual(handle_substitution(context, context), expected_output)
+
+
+def exception_function(value: int):
+    if value < 0:
+        raise ValueError("value must be non-negative")
+    yield value + 1
+
+
+class TestExceptions(unittest.TestCase):
+    @mock.patch("builtins.print")
+    def test_no_exceptions(self, mocked_print):
+        # Apply the decorator here or use a differently structured approach
+        gen = exceptions(exception_function)(1)
+        result_list = list(gen)
+
+        self.assertEqual(result_list, [2])
+        mocked_print.assert_not_called()
+
+    @mock.patch("builtins.print")
+    def test_with_exception(self, mocked_print):
+        gen = exceptions(exception_function)(-1)
+        result_list = list(gen)
+
+        self.assertTrue(mocked_print.called)
+
+        printed_exception = mocked_print.call_args[0][0]
+        self.assertIsInstance(printed_exception, ValueError)
+        self.assertEqual(str(printed_exception), "value must be non-negative")
 
 
 # class TestExecute(unittest.TestCase):
