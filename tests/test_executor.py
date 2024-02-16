@@ -6,6 +6,8 @@ from unittest import mock
 
 import hypergo.hyperdash as _
 from hypergo.hypertest import (
+    ENCRYPTIONKEY,
+    encryption,
     exceptions,
     handle_substitution,
     passbyreference,
@@ -369,6 +371,36 @@ class TestPassByReference(unittest.TestCase):
                     "File content does not match expected",
                 )
 
+
+class TestEncryptDecrypt(unittest.TestCase):
+    # TODO: rewrite this once @encryption responds to configs appropriately
+    def test_encrypt_decrypt(self):
+        input_body = "data"
+
+        @encryption
+        def test_func(data):
+            message_body_in_the_function = data["message"]["body"]
+
+            yield {
+                "message": {"body": f"modified {message_body_in_the_function}"}
+            }
+
+        data = {"message": {"body": input_body}}
+
+        _.encrypt(data, "message.body", ENCRYPTIONKEY)
+
+        result_generator = test_func(data)
+        result_data = next(result_generator)
+
+        self.assertEqual(_.decrypt(result_data, "message.body", ENCRYPTIONKEY), {'message': {'body': 'modified data'}})
+
+class TestTransactions(unittest.TestCase):
+    def test_transactions(self):
+        pass
+
+class TestBindArguments(unittest.TestCase):
+    def test_passbyreference(self):
+        pass
 
 # class TestExecute(unittest.TestCase):
 #     def test_uncompress_no_key(self):

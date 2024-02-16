@@ -148,6 +148,7 @@ def streaming(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., 
     return wrapper
 
 def passbyreference(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
+    #TODO: This doesn't work if the data isn't already in storage
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) ->Generator[Any, None, None]:
         results = func(fetchbyreference(data, "message.body", _.deep_get(data, "storage").use_sub_path("passbyreference/")), *args, **kwargs)
