@@ -6,12 +6,31 @@ from typing import (Any, Callable, Dict, Generator, List, Mapping, Match,
                     Optional, Set, TypeVar, Union, cast)
 
 from hypergo import hyperdash as _
+from hypergo.config import ConfigType
 from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 
 T = TypeVar("T")
 ENCRYPTIONKEY = "KRAgZMBXbP1OQQEJPvMTa6nfkVq63sgL2ULJIaMgfLA="
+
+
+class Executor:
+    @staticmethod
+    def func_spec(fn_name: str) -> Callable[..., Any]:
+        tokens: List[str] = fn_name.split(".")
+        return cast(Callable[..., Any], (getattr(importlib.import_module(".".join(tokens[:-1])), tokens[-1])))
+
+    @staticmethod
+    def arg_spec(func: Callable[..., Any]) -> List[type]:
+        params: Mapping[str, inspect.Parameter] = inspect.signature(func).parameters
+        return [params[k].annotation for k in list(params.keys())]
+
+    def __init__(self, config: ConfigType, storage: Optional[Storage] = None) -> None:
+        self._config: ConfigType = config
+        self._func_spec: Callable[..., Any] = Executor.func_spec(config["lib_func"])
+        self._arg_spec: List[type] = Executor.arg_spec(self._func_spec)
+        self._storage: Optional[Storage] = storage
 
 
 def generatorize(func: Callable[..., T]) -> Callable[..., Generator[T, None, None]]:
@@ -291,8 +310,8 @@ the_context: Dict[str, Any] = {"function": the_function, "storage": the_storage,
 @encryption
 @compression
 @serialization
-@chunking
-@streaming
+# @chunking
+# @streaming
 # @validation
 @transactions
 @substitutions
