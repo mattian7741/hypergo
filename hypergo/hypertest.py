@@ -130,7 +130,7 @@ def encryption(func: Callable[..., Generator[Any, None, None]]) -> Callable[...,
 def compression(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
-        results = func(_.uncompress(data, "message.body"), *args, **kwargs)
+        results = func(_.decompress(data, "message.body"), *args, **kwargs)
         for result in results:
             yield _.compress(result, "message.body")
 
@@ -357,8 +357,8 @@ def main() -> None:
     for i in execute(stored_message):
         loaded_message = fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
         unencrypted = _.decrypt(loaded_message, "body", ENCRYPTIONKEY)
-        uncompressed = _.uncompress(unencrypted, "body")
-        print(json.dumps(uncompressed))
+        decompressed = _.decompress(unencrypted, "body")
+        print(json.dumps(decompressed))
 
 
 if __name__ == "__main__":

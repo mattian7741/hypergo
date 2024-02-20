@@ -135,7 +135,7 @@ def compress(data: Any, key: Optional[str] = None) -> Any:
 
 
 @root_node
-def uncompress(data: Any, key: Optional[str] = None) -> Any:
+def decompress(data: Any, key: Optional[str] = None) -> Any:
     if not key:
         return json.loads(lzma.decompress(base64.b64decode(data)).decode("utf-8"))
 

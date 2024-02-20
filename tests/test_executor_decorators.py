@@ -1,3 +1,4 @@
+import base64
 import os
 import tempfile
 import unittest
@@ -6,6 +7,7 @@ from unittest import mock
 import hypergo.hyperdash as _
 from hypergo.hypertest import (
     ENCRYPTIONKEY,
+    compression,
     encryption,
     exceptions,
     handle_substitution,
@@ -326,60 +328,53 @@ class TestPassByReference(unittest.TestCase):
         os.chdir(self.original_cwd)
         self.temp_dir.cleanup()
 
-    def test_passbyreference(self):
-        input_body = "data"
-        storage_key = f"unique_storage_key"
+    @mock.patch("hypergo.hyperdash.unique_identifier", return_value="unique_storage_key")
+    def test_passbyreference(self, mock_unique_identifier):
+        storage = LocalStorage()
 
-        with mock.patch(
-            "hypergo.hyperdash.unique_identifier", return_value=storage_key
-        ):
-            storage = LocalStorage()
+        @passbyreference
+        def test_func(data):
+            message_body_in_the_function = data["message"]["body"]
 
-            @passbyreference
-            def test_func(data):
-                message_body_in_the_function = data["message"]["body"]
+            yield {"message": {"body": f"modified {message_body_in_the_function}"}}
 
-                yield {"message": {"body": f"modified {message_body_in_the_function}"}}
+        data = {"message": {"body": "data"}, "storage": storage}
 
-            data = {"message": {"body": input_body}, "storage": storage}
+        # It's awkward to use this function in a passbyreference test. Need to rethink.
+        storebyreference(
+            data, "message.body", storage.use_sub_path("passbyreference/")
+        )
 
-            # It's awkward to use this function in a passbyreference test. Need to rethink.
-            storebyreference(
-                data, "message.body", storage.use_sub_path("passbyreference/")
+        result_generator = test_func(data)
+        result_data = next(result_generator)
+
+        self.assertEqual(result_data["message"]["body"], "unique_storage_key")
+
+        expected_file_path = os.path.join(
+            ".hypergo_storage", "passbyreference", "unique_storage_key"
+        )
+
+        self.assertTrue(
+            os.path.exists(expected_file_path), "File was not created as expected"
+        )
+        with open(expected_file_path, "r", encoding="utf-8") as file:
+            self.assertEqual(
+                file.read(),
+                '"modified data"',
+                "File content does not match expected",
             )
-
-            result_generator = test_func(data)
-            result_data = next(result_generator)
-
-            self.assertEqual(result_data["message"]["body"], storage_key)
-
-            expected_file_path = os.path.join(
-                ".hypergo_storage", "passbyreference", storage_key
-            )
-
-            self.assertTrue(
-                os.path.exists(expected_file_path), "File was not created as expected"
-            )
-            with open(expected_file_path, "r", encoding="utf-8") as file:
-                self.assertEqual(
-                    file.read(),
-                    '"modified data"',
-                    "File content does not match expected",
-                )
 
 
 class TestEncryptDecrypt(unittest.TestCase):
     # TODO: rewrite this once @encryption responds to configs appropriately
     def test_encrypt_decrypt(self):
-        input_body = "data"
-
         @encryption
         def test_func(data):
             message_body_in_the_function = data["message"]["body"]
 
             yield {"message": {"body": f"modified {message_body_in_the_function}"}}
 
-        data = {"message": {"body": input_body}}
+        data = {"message": {"body": "data"}}
 
         _.encrypt(data, "message.body", ENCRYPTIONKEY)
 
@@ -402,72 +397,49 @@ class TestTransactions(unittest.TestCase):
         os.chdir(self.original_cwd)
         self.temp_dir.cleanup()
 
-    def test_transaction_dne(self):
-        input_body = "data"
-        storage_key = f"unique_storage_key"
+    @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="unique_storage_key")
+    def test_transaction_dne(self, mock_unique_identifier):
+        storage = LocalStorage()
 
-        with mock.patch(
-            "hypergo.utility.Utility.unique_identifier", return_value=storage_key
-        ):
-            storage = LocalStorage()
-
-            @transactions
-            def test_func(data):
-                message_body_in_the_function = data["message"]["body"]
-
-                data["message"]["body"] = f"modified {message_body_in_the_function}"
-
-                yield data
-
-            data = {
-                "message": {
-                    "body": input_body,
-                },
-                "storage": storage,
-            }
-
-            result_generator = test_func(data)
-            result_data = next(result_generator)
-
-            self.assertEqual(result_data["message"]["body"], "modified data")
-
-            expected_file_path = os.path.join(
-                ".hypergo_storage", "transactions", f"transactionkey_{storage_key}"
-            )
-
-            self.assertTrue(
-                os.path.exists(expected_file_path), "File was not created as expected"
-            )
-            with open(expected_file_path, "r", encoding="utf-8") as file:
-                # I think this is the temporary result, right?
-                self.assertEqual(
-                    file.read(),
-                    '{"txid": "unique_storage_key", "data": {}}',
-                    "File content does not match expected",
-                )
-
-
-class TestBindArguments(unittest.TestCase):
-    def test_encrypt_decrypt(self):
-        input_body = "data"
-
-        @encryption
+        @transactions
         def test_func(data):
             message_body_in_the_function = data["message"]["body"]
 
-            yield {"message": {"body": f"modified {message_body_in_the_function}"}}
+            data["message"]["body"] = f"modified {message_body_in_the_function}"
 
-        data = {"message": {"body": input_body}}
+            yield data
 
-        _.encrypt(data, "message.body", ENCRYPTIONKEY)
+        data = {
+            "message": {
+                "body": "data",
+            },
+            "storage": storage,
+        }
 
         result_generator = test_func(data)
         result_data = next(result_generator)
 
-        self.assertEqual(
-            _.decrypt(result_data, "message.body", ENCRYPTIONKEY),
-            {"message": {"body": "modified data"}},
+        self.assertEqual(result_data["message"]["body"], "modified data")
+
+        expected_file_path = os.path.join(
+            ".hypergo_storage", "transactions", "transactionkey_unique_storage_key"
         )
+
+        self.assertTrue(
+            os.path.exists(expected_file_path), "File was not created as expected"
+        )
+        with open(expected_file_path, "r", encoding="utf-8") as file:
+            # I think this is the temporary result, right?
+            self.assertEqual(
+                file.read(),
+                '{"txid": "unique_storage_key", "data": {}}',
+                "File content does not match expected",
+            )
+
+
+class TestBindArguments(unittest.TestCase):
+    def test_encrypt_decrypt(self):
+        pass
 
 
 class TestChunking(unittest.TestCase):
@@ -478,6 +450,43 @@ class TestChunking(unittest.TestCase):
 class TestStreaming(unittest.TestCase):
     def test_passbyreference(self):
         pass
+
+class TestCompression(unittest.TestCase):
+    # TODO: rewrite this once @compression responds to configs appropriately
+    def test_compression_decorator_integration(self):
+        storage = LocalStorage()
+
+        data = {
+            "message": {
+                "body": "data",
+            },
+            "storage": storage,
+        }
+
+        @compression
+        def test_func(data):
+            message_body_in_the_function = data["message"]["body"]
+
+            data["message"]["body"] = f"modified {message_body_in_the_function}"
+
+            yield data
+        
+        compressed_data = _.compress(data, "message.body")
+
+        # Execute the decorated generator with compressed input data
+        generator = test_func(compressed_data)
+        result_data = next(generator)
+
+        decompressed_result_data = _.decompress(result_data, "message.body")
+
+        self.assertDictEqual(decompressed_result_data, {
+            "message": {
+                "body": "modified data",
+            },
+            "storage": storage,
+        })
+
+
 
 if __name__ == "__main__":
     unittest.main()
