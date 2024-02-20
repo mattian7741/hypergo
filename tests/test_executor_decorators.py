@@ -19,6 +19,7 @@ from hypergo.hypertest import (
 )
 from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
+from hypergo.transaction import Transaction
 
 test_storage: Storage = LocalStorage()
 
@@ -436,6 +437,50 @@ class TestTransactions(unittest.TestCase):
                 "File content does not match expected",
             )
 
+    @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="txid")
+    def test_transaction_exists(self, mock_unique_identifier):
+        storage = LocalStorage()
+
+        @transactions
+        def test_func(data):
+            message_body_in_the_function = data["message"]["body"]
+
+            data["message"]["body"] = f"modified {message_body_in_the_function}"
+
+            yield data
+
+        existing_transaction = Transaction("txid", {"some": "data"})
+        serialized_transaction = existing_transaction.serialize()
+        storage.save(f"transactionkey_{existing_transaction.txid}", serialized_transaction)
+
+        data = {
+            "message": {
+                "body": "data",
+            },
+            "storage": storage,
+            "transaction": existing_transaction
+        }
+
+        result_generator = test_func(data)
+        result_data = next(result_generator)
+
+        self.assertEqual(result_data["message"]["body"], "modified data")
+
+        expected_file_path = os.path.join(
+            ".hypergo_storage", "transactions", "transactionkey_txid"
+        )
+
+        self.assertTrue(
+            os.path.exists(expected_file_path), "File was not created as expected"
+        )
+        with open(expected_file_path, "r", encoding="utf-8") as file:
+            # I think this is a temporary result, right? why is data empty?
+            self.assertEqual(
+                file.read(),
+                '{"txid": "txid", "data": {}}',
+                "File content does not match expected",
+            )
+
 
 class TestBindArguments(unittest.TestCase):
     def test_encrypt_decrypt(self):
@@ -453,7 +498,7 @@ class TestStreaming(unittest.TestCase):
 
 class TestCompression(unittest.TestCase):
     # TODO: rewrite this once @compression responds to configs appropriately
-    def test_compression_decorator_integration(self):
+    def test_compression(self):
         storage = LocalStorage()
 
         data = {
