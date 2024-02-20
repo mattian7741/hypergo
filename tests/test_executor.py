@@ -12,10 +12,13 @@ from hypergo.hypertest import (
     handle_substitution,
     passbyreference,
     replace_wildcard_from_routingkey,
+    save_transaction,
     storebyreference,
+    transactions,
 )
 from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
+from hypergo.transaction import Transaction
 
 test_storage: Storage = LocalStorage()
 
@@ -338,10 +341,7 @@ class TestPassByReference(unittest.TestCase):
             def test_func(data):
                 message_body_in_the_function = data["message"]["body"]
 
-                yield {
-                    "message": {"body": f"modified {message_body_in_the_function}"},
-                    "storage": storage,
-                }
+                yield {"message": {"body": f"modified {message_body_in_the_function}"}}
 
             data = {"message": {"body": input_body}, "storage": storage}
 
@@ -355,12 +355,10 @@ class TestPassByReference(unittest.TestCase):
 
             self.assertEqual(result_data["message"]["body"], storage_key)
 
-            # Construct the file path where the content is expected to be saved
             expected_file_path = os.path.join(
                 ".hypergo_storage", "passbyreference", storage_key
             )
 
-            # Check that the file exists and contains the expected content
             self.assertTrue(
                 os.path.exists(expected_file_path), "File was not created as expected"
             )
@@ -381,9 +379,7 @@ class TestEncryptDecrypt(unittest.TestCase):
         def test_func(data):
             message_body_in_the_function = data["message"]["body"]
 
-            yield {
-                "message": {"body": f"modified {message_body_in_the_function}"}
-            }
+            yield {"message": {"body": f"modified {message_body_in_the_function}"}}
 
         data = {"message": {"body": input_body}}
 
@@ -392,15 +388,76 @@ class TestEncryptDecrypt(unittest.TestCase):
         result_generator = test_func(data)
         result_data = next(result_generator)
 
-        self.assertEqual(_.decrypt(result_data, "message.body", ENCRYPTIONKEY), {'message': {'body': 'modified data'}})
+        self.assertEqual(
+            _.decrypt(result_data, "message.body", ENCRYPTIONKEY),
+            {"message": {"body": "modified data"}},
+        )
+
 
 class TestTransactions(unittest.TestCase):
-    def test_transactions(self):
-        pass
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_cwd = os.getcwd()
+        os.chdir(self.temp_dir.name)
+
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        self.temp_dir.cleanup()
+
+    def test_transaction_dne(self):
+        input_body = "data"
+        storage_key = f"unique_storage_key"
+
+        with mock.patch(
+            "hypergo.utility.Utility.unique_identifier", return_value=storage_key
+        ):
+            storage = LocalStorage()
+
+            @transactions
+            def test_func(data):
+                message_body_in_the_function = data["message"]["body"]
+
+                data["message"]["body"] = f"modified {message_body_in_the_function}"
+
+                yield data
+
+            data = {
+                "message": {
+                    "body": input_body,
+                },
+                "storage": storage,
+            }
+
+            result_generator = test_func(data)
+            result_data = next(result_generator)
+
+            self.assertEqual(result_data["message"]["body"], "modified data")
+
+            expected_file_path = os.path.join(
+                ".hypergo_storage", "transactions", f"transactionkey_{storage_key}"
+            )
+
+            self.assertTrue(
+                os.path.exists(expected_file_path), "File was not created as expected"
+            )
+            with open(expected_file_path, "r", encoding="utf-8") as file:
+                # I think this is the temporary result, right?
+                self.assertEqual(
+                    file.read(),
+                    '{"txid": "unique_storage_key", "data": {}}',
+                    "File content does not match expected",
+                )
+
 
 class TestBindArguments(unittest.TestCase):
     def test_passbyreference(self):
         pass
+
+
+class TestChunking(unittest.TestCase):
+    def test_passbyreference(self):
+        pass
+
 
 # class TestExecute(unittest.TestCase):
 #     def test_uncompress_no_key(self):

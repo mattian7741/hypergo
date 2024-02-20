@@ -6,11 +6,14 @@ from hypergo.utility import Utility
 
 T = TypeVar("T")
 
+
 def addsubfolder(func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
     def wrapper(self: Any, file_name: str, *args: Any) -> T:
         return func(self, f".hypergo_storage/{file_name}", *args)
+
     return wrapper
+
 
 class LocalStorage(Storage):
     @addsubfolder

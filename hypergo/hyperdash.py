@@ -1,4 +1,3 @@
-
 import base64
 import binascii
 import hashlib
@@ -15,8 +14,8 @@ from typing import (Any, Callable, Dict, List, Mapping, Optional, Tuple, Union,
 import dill
 import glom
 import pydash
-from cryptography.fernet import Fernet
 import yaml
+from cryptography.fernet import Fernet
 
 
 def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -31,6 +30,7 @@ def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
 
     return wrapper
 
+
 def root_node(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
     def wrapper(value: Any, key: Optional[str] = None, *args: Tuple[Any, ...]) -> Any:
@@ -38,14 +38,19 @@ def root_node(func: Callable[..., Any]) -> Callable[..., Any]:
 
     return wrapper
 
-def deep_get(data: Union[List[Any], Dict[str, Any]], key: Union[int, str], default_sentinel: Optional[Any] = object) -> Any:
+
+def deep_get(
+    data: Union[List[Any], Dict[str, Any]], key: Union[int, str], default_sentinel: Optional[Any] = object
+) -> Any:
     if not pydash.has(data, str(key)) and default_sentinel == object:
         raise KeyError(f"Spec \"{key}\" not found in the dictionary {json.dumps(serialize(data, None))}")
     return pydash.get(data, str(key), default_sentinel)
 
+
 def deep_set(data: Union[List[Any], Dict[str, Any]], key: str, val: Any) -> Union[List[Any], Dict[str, Any]]:
     glom.assign(data, key, val, missing=dict)
     return data
+
 
 def deep_unset(data: Dict[str, Any], key: str) -> None:
     tokens: List[Any] = key.split(".")
@@ -57,17 +62,22 @@ def deep_unset(data: Dict[str, Any], key: str) -> None:
         obj: Dict[str, Any] = deep_get(data, deep_key)
         del obj[del_key]
 
+
 def unique_identifier(prefix: str = "") -> str:
     return f"{prefix}{['','_'][bool(prefix)]}{utc_string()}{uuid()[:8]}"
+
 
 def utc_string(prefix: str = "") -> str:
     return f"{prefix}{['','_'][bool(prefix)]}{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}"
 
+
 def uuid(prefix: str = "") -> str:
     return f"{prefix}{['','_'][bool(prefix)]}{str(uuid_lib.uuid4())}"
 
+
 def hash(string: str, prefix: str = "") -> str:
     return f"{prefix}{['','_'][bool(prefix)]}{hashlib.md5(string.encode('utf-8')).hexdigest()}"
+
 
 def stringify(objectified: Any) -> str:
     try:
@@ -75,12 +85,14 @@ def stringify(objectified: Any) -> str:
     except (TypeError, ValueError):
         return str(objectified)
 
+
 def objectify(stringified: str) -> Union[List[Any], Dict[str, Any]]:
     return cast(Union[List[Any], Dict[str, Any]], json.loads(stringified))
 
+
 @root_node
 @traverse_datastructures
-def serialize(obj: Any, key: Optional[str]=None) -> Any:
+def serialize(obj: Any, key: Optional[str] = None) -> Any:
     if type(obj) in [None, bool, int, float, str]:
         return cast(Union[None, bool, int, float, str], obj)
 
@@ -93,6 +105,7 @@ def serialize(obj: Any, key: Optional[str]=None) -> Any:
     encoded: bytes = base64.b64encode(serialized)
     utfdecoded: str = encoded.decode("utf-8")
     return utfdecoded
+
 
 @root_node
 @traverse_datastructures
@@ -107,6 +120,7 @@ def deserialize(serialized: str, key: Optional[str] = None) -> Any:
     except (binascii.Error, dill.UnpicklingError, AttributeError, MemoryError):
         return serialized
 
+
 @root_node
 def compress(data: Any, key: Optional[str] = None) -> Any:
     if not key:
@@ -118,6 +132,7 @@ def compress(data: Any, key: Optional[str] = None) -> Any:
         base64.b64encode(lzma.compress(json.dumps(deep_get(data, key)).encode("utf-8"))).decode("utf-8"),
     )
     return data
+
 
 @root_node
 def uncompress(data: Any, key: Optional[str] = None) -> Any:
@@ -131,7 +146,8 @@ def uncompress(data: Any, key: Optional[str] = None) -> Any:
     )
     return data
 
-@root_node #change encrypt to operate on a value and move the key handling out into a decorator
+
+@root_node  # change encrypt to operate on a value and move the key handling out into a decorator
 def encrypt(data: Any, key: str, encryptkey: str) -> Any:
     key_bytes = encryptkey.encode("utf-8")
     data_bytes = stringify(deep_get(data, key)).encode("utf-8")
@@ -139,6 +155,7 @@ def encrypt(data: Any, key: str, encryptkey: str) -> Any:
     encrypted = encrypted_bytes.decode("utf-8")
     deep_set(data, key, encrypted)
     return data
+
 
 @root_node
 def decrypt(encrypted_data: Any, key: str, encryptkey: str) -> Any:
@@ -149,16 +166,20 @@ def decrypt(encrypted_data: Any, key: str, encryptkey: str) -> Any:
     deep_set(encrypted_data, key, objectify(decrypted))
     return encrypted_data
 
+
 def is_array(obj: Any) -> bool:
     return isinstance(obj, (list, set, tuple, types.GeneratorType))
+
 
 def json_read(file_name: str) -> Mapping[str, Any]:
     with open(file_name, "r", encoding="utf-8") as file_handle:
         return cast(Mapping[str, Any], json.load(file_handle))
-    
+
+
 def yaml_read(file_name: str) -> Mapping[str, Any]:
     with open(file_name, "r", encoding="utf-8") as file_handle:
         return cast(Mapping[str, Any], yaml.safe_load(file_handle))
+
 
 def safecast(expected_type: type, provided_value: Any) -> Any:
     ret: Any = provided_value
