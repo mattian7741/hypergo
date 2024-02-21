@@ -88,6 +88,7 @@ class Config:
                     "custom_properties": lambda source: source("custom_properties"),
                 }
             ),
+            # TODO: use this commented block to identify v3 components and use that to redirect execution to the new executor
             # "2.X.X": Mapping(
             #     {
             #         "version": "3.0.0",

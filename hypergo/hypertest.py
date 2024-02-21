@@ -15,22 +15,7 @@ T = TypeVar("T")
 ENCRYPTIONKEY = "KRAgZMBXbP1OQQEJPvMTa6nfkVq63sgL2ULJIaMgfLA="
 
 
-class Executor:
-    @staticmethod
-    def func_spec(fn_name: str) -> Callable[..., Any]:
-        tokens: List[str] = fn_name.split(".")
-        return cast(Callable[..., Any], (getattr(importlib.import_module(".".join(tokens[:-1])), tokens[-1])))
 
-    @staticmethod
-    def arg_spec(func: Callable[..., Any]) -> List[type]:
-        params: Mapping[str, inspect.Parameter] = inspect.signature(func).parameters
-        return [params[k].annotation for k in list(params.keys())]
-
-    def __init__(self, config: ConfigType, storage: Optional[Storage] = None) -> None:
-        self._config: ConfigType = config
-        self._func_spec: Callable[..., Any] = Executor.func_spec(config["lib_func"])
-        self._arg_spec: List[type] = Executor.arg_spec(self._func_spec)
-        self._storage: Optional[Storage] = storage
 
 
 def generatorize(func: Callable[..., T]) -> Callable[..., Generator[T, None, None]]:
@@ -106,11 +91,15 @@ def get_args(args: List[Any]) -> List[Any]:
 def bind_arguments(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
-        # print("bindargs: ", data)
+        arguemnts_to_print = get_args(_.deep_get(data, "config.input_bindings"))
+        print(f"args: {arguemnts_to_print}")
+
         for result in func(get_args(_.deep_get(data, "config.input_bindings")), *args, **kwargs):
+            # TODO: new functionality
             _.deep_set(data, "output", result)
             for binding in _.deep_get(data, "config.output_bindings"):
                 data.update(binding)
+                # TODO: this does NOT zip together output_keys and results and send one message to each. Instead, for each result, it sends a message to all output_keys. in other words, we get MxN messages
                 for output_key in _.deep_get(data, "config.output_keys"):
                     yield _.deep_set(data, "message.routingkey", output_key)
 
@@ -160,6 +149,7 @@ def chunker(collection: Any, chunk_size: int = 1) -> Generator[List[Any], None, 
 
 
 def chunking(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
+    # TODO: new functionality
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
         for chunk in chunker(_.deep_get(data, "message.body")):
@@ -176,6 +166,7 @@ def streamer(collection: Any) -> Generator[Any, None, None]:
 
 
 def streaming(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
+    # TODO: new functionality
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
         for item in streamer(_.deep_get(data, "message.body")):
@@ -186,7 +177,7 @@ def streaming(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., 
 
 
 def passbyreference(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
-    # TODO: This doesn't work if the data isn't already in storage
+    # TODO: This doesn't work if the data isn't already in storage. It needs to read the config to determine what to passbyreference and what not to
     @wraps(func)
     def wrapper(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
         results = func(
@@ -300,7 +291,6 @@ the_context: Dict[str, Any] = {"function": the_function, "storage": the_storage,
 
 ##########################################################################
 
-
 @exceptions
 # @unbatching
 # @batching
@@ -354,11 +344,35 @@ def main() -> None:
     stored_message = storebyreference(encrypted_message, "body", the_storage.use_sub_path("passbyreference"))
     import json  # pylint: disable=import-outside-toplevel
 
-    for i in execute(stored_message):
+    for i in Executor.execute(stored_message):
         loaded_message = fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
         unencrypted = _.decrypt(loaded_message, "body", ENCRYPTIONKEY)
         decompressed = _.decompress(unencrypted, "body")
         print(json.dumps(decompressed))
+
+class Executor:
+    @exceptions
+    # @unbatching
+    # @batching
+    @contextualize
+    @substitutions
+    @passbyreference
+    @encryption
+    @compression
+    @serialization
+    # @chunking
+    # @streaming
+    # @validation
+    @transactions
+    @substitutions
+    # @mapping
+    @bind_arguments
+    @staticmethod
+    def execute(data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
+        # yield from generatorize(the_function)(*data, *args, **kwargs)
+        for result in generatorize(the_function)(*data, *args, **kwargs):
+            # print(result)
+            yield result
 
 
 if __name__ == "__main__":
