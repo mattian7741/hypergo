@@ -9,6 +9,8 @@ from hypergo.hypertest import (
     ENCRYPTIONKEY,
     encryption,
     exceptions,
+    execute,
+    fetchbyreference,
     handle_substitution,
     passbyreference,
     replace_wildcard_from_routingkey,
@@ -20,11 +22,12 @@ from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 
-def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
-    count = trans.get("count", 1)
-    trans.set("count", count + 1)
-    result: float = farfunc(float1, float2) / count
-    return result
+def test_func(data):
+    message_body_in_the_function = data["message"]["body"]
+
+    data["message"]["body"] = f"modified {message_body_in_the_function}"
+
+    yield data
 
 
 the_config: Dict[str, Any] = {
@@ -38,26 +41,38 @@ the_config: Dict[str, Any] = {
 }
 
 the_storage: Storage = LocalStorage()
-the_context: Dict[str, Any] = {"function": the_function, "storage": the_storage, "config": the_config}
+the_context: Dict[str, Any] = {"function": test_func, "storage": the_storage, "config": the_config}
 
 
 class TestBasicCase(unittest.TestCase):
-    def test_no_wildcard_present(self):
-        def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
-            count = trans.get("count", 1)
-            trans.set("count", count + 1)
-            result: float = farfunc(float1, float2) / count
-            return result
+    def setUp(self):
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.original_cwd = os.getcwd()
+        os.chdir(self.temp_dir.name)
 
+    def tearDown(self):
+        os.chdir(self.original_cwd)
+        self.temp_dir.cleanup()
 
-        the_config: Dict[str, Any] = {
-            "lib_func": "hypergo.hypertest.the_function",
-            "input_keys": ["abc.def", "ghi.jkl"],
-            "output_keys": ["mno.pqr"],
-            "input_bindings": ["constant string"],
-            "output_bindings": [{"message": {"body": {"p": {"q": {"r": "{output}"}}}}}],
-            "custom_properties": {"x": "{message.body.a.fn}", "w": "{message.body.a.c}"},
+    @mock.patch("hypergo.hypertest.the_function", test_func)
+    def test_basic_case(self, mock_test_func):
+        message = {
+            "routingkey": "x.y.z",
+            "body": {"a": {"fn": lambda m, n: (m + n) / (m * n), "x": 23, "y": 41}}
         }
+        serialized_message = _.serialize(message, "body")
+        compressed_message = _.compress(serialized_message, "body")
+        encrypted_message = _.encrypt(compressed_message, "body", ENCRYPTIONKEY)
+        stored_message = storebyreference(encrypted_message, "body", the_storage.use_sub_path("passbyreference"))
+        import json  # pylint: disable=import-outside-toplevel
 
-        the_storage: Storage = LocalStorage()
-        the_context: Dict[str, Any] = {"function": the_function, "storage": the_storage, "config": the_config}
+        for i in execute(stored_message):
+            loaded_message = fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
+            unencrypted = _.decrypt(loaded_message, "body", ENCRYPTIONKEY)
+            decompressed = _.decompress(unencrypted, "body")
+            print(json.dumps(decompressed))
+
+
+
+if __name__ == "__main__":
+    unittest.main()

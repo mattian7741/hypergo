@@ -1,12 +1,15 @@
 import base64
+import inspect
 import os
 import tempfile
 import unittest
 from unittest import mock
+import hypergo.hyperdash as _
 
 import hypergo.hyperdash as _
 from hypergo.hypertest import (
     ENCRYPTIONKEY,
+    bind_func,
     compression,
     encryption,
     exceptions,
@@ -531,6 +534,62 @@ class TestCompression(unittest.TestCase):
             "storage": storage,
         })
 
+class TestBindFunc(unittest.TestCase):
+    @mock.patch("importlib.import_module")
+    def test_bind_func(self, mock_import_module):
+        @bind_func
+        def test_func(data):
+            message_body_in_the_function = data["message"]["body"]
+            data["message"]["body"] = f"modified {message_body_in_the_function}"
+
+            yield data
+
+        def func_to_bind():
+            yield True
+
+        mock_module = mock.Mock()
+        setattr(mock_module, 'func_to_bind', func_to_bind)
+
+        mock_import_module.return_value = mock_module
+
+        context = {
+            "config": {
+                "lib_func": "testiboi.func_to_bind",
+                "input_keys": ["xxx.yyy.zzz", "vvv.uuu.www"],
+                "output_keys": ["mmm.nnn.ooo"],
+                "input_bindings": ["{config.custom_properties.?}"],
+                "output_bindings": ["message.body.payload"],
+                "custom_properties": {"111": {"222": "333"}, "444": "555"},
+            },
+            "message": {
+                "body": "data",
+            },
+        }
+
+        result_generator = test_func(context)
+        result_data = next(result_generator)
+
+        # we can't directly test the functionality of func_to_bind because when it is set as an attribute on a mock object, it becomes a mock. But we can assert that there is something there.
+        assert "func_spec" in result_data["config"]
+
+        result_data["config"].pop("func_spec")
+
+        self.assertDictEqual(
+            result_data,
+            {
+                "config": {
+                    "lib_func": "testiboi.func_to_bind",
+                    "input_keys": ["xxx.yyy.zzz", "vvv.uuu.www"],
+                    "output_keys": ["mmm.nnn.ooo"],
+                    "input_bindings": ["{config.custom_properties.?}"],
+                    "output_bindings": ["message.body.payload"],
+                    "custom_properties": {"111": {"222": "333"}, "444": "555"},
+                },
+                "message": {
+                    "body": "modified data",
+                },
+            },
+        )
 
 
 if __name__ == "__main__":
