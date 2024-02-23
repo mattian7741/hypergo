@@ -11,6 +11,8 @@ from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 
+from copy import deepcopy
+
 T = TypeVar("T")
 ENCRYPTIONKEY = "KRAgZMBXbP1OQQEJPvMTa6nfkVq63sgL2ULJIaMgfLA="
 
@@ -212,7 +214,7 @@ class Executor:
                 _.deep_get(result, "message")
                 for result in func(
                     self,
-                    {"config": self.config, "message": message, "storage": self.storage, "output": None},
+                    {"config": deepcopy(self.config), "message": message, "storage": self.storage, "output": None},
                     *args,
                     **kwargs,
                 )
