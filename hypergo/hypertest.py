@@ -64,18 +64,6 @@ def streaming(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., 
     return wrapper
 
 
-@_.root_node
-def storebyreference(data: Any, key: str, storage: Storage) -> Any:
-    out_storage_key = f"{_.unique_identifier('storagekey')}"
-    storage.save(out_storage_key, _.stringify(_.deep_get(data, key)))
-    return _.deep_set(data, key, out_storage_key)
-
-
-@_.root_node
-def fetchbyreference(data: Union[List[Any], Dict[str, Any]], key: str, storage: Storage) -> Any:
-    return _.deep_set(data, key, _.objectify(storage.load(_.deep_get(data, key))))
-
-
 ##########################################################################
 
 
@@ -136,7 +124,7 @@ def main() -> None:
     serialized_message = _.serialize(message, "body")
     compressed_message = _.compress(serialized_message, "body")
     encrypted_message = _.encrypt(compressed_message, "body", ENCRYPTIONKEY)
-    stored_message = storebyreference(encrypted_message, "body", the_storage.use_sub_path("passbyreference"))
+    stored_message = Executor.storebyreference(encrypted_message, "body", the_storage.use_sub_path("passbyreference"))
     import json  # pylint: disable=import-outside-toplevel
 
     config = ConfigType(
@@ -159,7 +147,7 @@ def main() -> None:
     executor = Executor(config, the_storage)
 
     for i in executor.execute(stored_message):
-        loaded_message = fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
+        loaded_message = Executor.fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
         unencrypted = _.decrypt(loaded_message, "body", ENCRYPTIONKEY)
         decompressed = _.decompress(unencrypted, "body")
         print(json.dumps(decompressed))
@@ -197,7 +185,6 @@ class Executor:
     def exceptions(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Generator[Any, None, None]:
-            print(f"I'm in exceptions args: {args}, kwargs: {kwargs}\n")
             try:
                 yield from func(*args, **kwargs)
             except Exception as exc:  # pylint: disable=broad-except
@@ -268,16 +255,30 @@ class Executor:
             print(f"I'm in passbyreference self: {self} data: {data}\n")
             results = func(
                 self,
-                fetchbyreference(data, "message.body", _.deep_get(data, "storage").use_sub_path("passbyreference/")),
+                Executor.fetchbyreference(data, "message.body", _.deep_get(data, "storage").use_sub_path("passbyreference/")),
                 *args,
                 **kwargs,
             )
             for result in results:
-                yield storebyreference(
+                yield Executor.storebyreference(
                     result, "message.body", _.deep_get(data, "storage").use_sub_path("passbyreference/")
                 )
 
         return wrapper
+
+
+    @_.root_node
+    @staticmethod
+    def storebyreference(data: Any, key: str, storage: Storage) -> Any:
+        out_storage_key = f"{_.unique_identifier('storagekey')}"
+        storage.save(out_storage_key, _.stringify(_.deep_get(data, key)))
+        return _.deep_set(data, key, out_storage_key)
+
+
+    @_.root_node
+    @staticmethod
+    def fetchbyreference(data: Union[List[Any], Dict[str, Any]], key: str, storage: Storage) -> Any:
+        return _.deep_set(data, key, _.objectify(storage.load(_.deep_get(data, key))))
 
     @staticmethod
     def encryption(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:

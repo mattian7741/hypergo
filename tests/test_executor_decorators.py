@@ -4,22 +4,12 @@ import os
 import tempfile
 import unittest
 from unittest import mock
+
+from mock import Mock
 import hypergo.hyperdash as _
 
 import hypergo.hyperdash as _
-from hypergo.hypertest import (
-    ENCRYPTIONKEY,
-    bind_func,
-    compression,
-    encryption,
-    exceptions,
-    handle_substitution,
-    passbyreference,
-    replace_wildcard_from_routingkey,
-    save_transaction,
-    storebyreference,
-    transactions,
-)
+from hypergo.hypertest import Executor, ENCRYPTIONKEY
 from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
@@ -49,7 +39,7 @@ class TestReplaceWildcardFromRoutingkey(unittest.TestCase):
         expected_output = "message.body.abc.bcd"
 
         self.assertEqual(
-            replace_wildcard_from_routingkey(context, input_string), expected_output
+            Executor._replace_wildcard_from_routingkey(context, input_string), expected_output
         )
 
     def test_single_wildcard_replacement(self):
@@ -73,7 +63,7 @@ class TestReplaceWildcardFromRoutingkey(unittest.TestCase):
         expected_output = "config.custom_properties.111"
 
         self.assertEqual(
-            replace_wildcard_from_routingkey(context, input_string), expected_output
+            Executor._replace_wildcard_from_routingkey(context, input_string), expected_output
         )
 
     def test_wildcard_with_no_match(self):
@@ -114,7 +104,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
 
-        self.assertDictEqual(handle_substitution(context, context), expected_output)
+        self.assertDictEqual(Executor._handle_substitution(context, context), expected_output)
 
     def test_custom_properties(self):
         context = {
@@ -159,7 +149,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
 
-        self.assertDictEqual(handle_substitution(context, context), expected_output)
+        self.assertDictEqual(Executor._handle_substitution(context, context), expected_output)
 
     def test_custom_properties_with_wildcard(self):
         context = {
@@ -204,7 +194,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
 
-        self.assertDictEqual(handle_substitution(context, context), expected_output)
+        self.assertDictEqual(Executor._handle_substitution(context, context), expected_output)
 
     def test_multiple_substitutions(self):
         context = {
@@ -249,7 +239,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
 
-        self.assertDictEqual(handle_substitution(context, context), expected_output)
+        self.assertDictEqual(Executor._handle_substitution(context, context), expected_output)
 
     def test_unmatched_substitution(self):  # is this the behavior we want?
         context = {
@@ -291,7 +281,7 @@ class TestHandleSubstitutions(unittest.TestCase):
             },
         }
 
-        self.assertDictEqual(handle_substitution(context, context), expected_output)
+        self.assertDictEqual(Executor._handle_substitution(context, context), expected_output)
 
 
 def test_function(value: int):
@@ -304,7 +294,7 @@ def test_function(value: int):
 class TestExceptions(unittest.TestCase):
     @mock.patch("builtins.print")
     def test_no_exceptions(self, mocked_print):
-        gen = exceptions(test_function)(1)
+        gen = Executor.exceptions(test_function)(1)
         result_list = list(gen)
 
         self.assertEqual(result_list, [1, 2])
@@ -312,7 +302,7 @@ class TestExceptions(unittest.TestCase):
 
     @mock.patch("builtins.print")
     def test_with_exception(self, mocked_print):
-        gen = exceptions(test_function)(-1)
+        gen = Executor.exceptions(test_function)(-1)
         result_list = list(gen)
 
         self.assertTrue(mocked_print.called)
@@ -336,8 +326,8 @@ class TestPassByReference(unittest.TestCase):
     def test_passbyreference(self, mock_unique_identifier):
         storage = LocalStorage()
 
-        @passbyreference
-        def test_func(data):
+        @Executor.passbyreference
+        def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
 
             yield {"message": {"body": f"modified {message_body_in_the_function}"}}
@@ -345,11 +335,11 @@ class TestPassByReference(unittest.TestCase):
         data = {"message": {"body": "data"}, "storage": storage}
 
         # It's awkward to use this function in a passbyreference test. Need to rethink.
-        storebyreference(
+        Executor.storebyreference(
             data, "message.body", storage.use_sub_path("passbyreference/")
         )
 
-        result_generator = test_func(data)
+        result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
         self.assertEqual(result_data["message"]["body"], "unique_storage_key")
@@ -372,8 +362,8 @@ class TestPassByReference(unittest.TestCase):
 class TestEncryptDecrypt(unittest.TestCase):
     # TODO: rewrite this once @encryption responds to configs appropriately
     def test_encrypt_decrypt(self):
-        @encryption
-        def test_func(data):
+        @Executor.encryption
+        def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
 
             yield {"message": {"body": f"modified {message_body_in_the_function}"}}
@@ -382,7 +372,7 @@ class TestEncryptDecrypt(unittest.TestCase):
 
         _.encrypt(data, "message.body", ENCRYPTIONKEY)
 
-        result_generator = test_func(data)
+        result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
         self.assertEqual(
@@ -405,8 +395,8 @@ class TestTransactions(unittest.TestCase):
     def test_transaction_dne(self, mock_unique_identifier):
         storage = LocalStorage()
 
-        @transactions
-        def test_func(data):
+        @Executor.transactions
+        def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
 
             data["message"]["body"] = f"modified {message_body_in_the_function}"
@@ -420,7 +410,7 @@ class TestTransactions(unittest.TestCase):
             "storage": storage,
         }
 
-        result_generator = test_func(data)
+        result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
         self.assertEqual(result_data["message"]["body"], "modified data")
@@ -444,8 +434,8 @@ class TestTransactions(unittest.TestCase):
     def test_transaction_exists(self, mock_unique_identifier):
         storage = LocalStorage()
 
-        @transactions
-        def test_func(data):
+        @Executor.transactions
+        def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
 
             data["message"]["body"] = f"modified {message_body_in_the_function}"
@@ -464,7 +454,7 @@ class TestTransactions(unittest.TestCase):
             "transaction": existing_transaction
         }
 
-        result_generator = test_func(data)
+        result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
         self.assertEqual(result_data["message"]["body"], "modified data")
@@ -511,8 +501,8 @@ class TestCompression(unittest.TestCase):
             "storage": storage,
         }
 
-        @compression
-        def test_func(data):
+        @Executor.compression
+        def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
 
             data["message"]["body"] = f"modified {message_body_in_the_function}"
@@ -522,7 +512,7 @@ class TestCompression(unittest.TestCase):
         compressed_data = _.compress(data, "message.body")
 
         # Execute the decorated generator with compressed input data
-        generator = test_func(compressed_data)
+        generator = test_func(Mock(), compressed_data)
         result_data = next(generator)
 
         decompressed_result_data = _.decompress(result_data, "message.body")
@@ -534,16 +524,9 @@ class TestCompression(unittest.TestCase):
             "storage": storage,
         })
 
-class TestBindFunc(unittest.TestCase):
+class TestInit(unittest.TestCase):
     @mock.patch("importlib.import_module")
     def test_bind_func(self, mock_import_module):
-        @bind_func
-        def test_func(data):
-            message_body_in_the_function = data["message"]["body"]
-            data["message"]["body"] = f"modified {message_body_in_the_function}"
-
-            yield data
-
         def func_to_bind():
             yield True
 
@@ -552,44 +535,22 @@ class TestBindFunc(unittest.TestCase):
 
         mock_import_module.return_value = mock_module
 
-        context = {
-            "config": {
+        config = {
                 "lib_func": "testiboi.func_to_bind",
                 "input_keys": ["xxx.yyy.zzz", "vvv.uuu.www"],
                 "output_keys": ["mmm.nnn.ooo"],
                 "input_bindings": ["{config.custom_properties.?}"],
                 "output_bindings": ["message.body.payload"],
                 "custom_properties": {"111": {"222": "333"}, "444": "555"},
-            },
-            "message": {
-                "body": "data",
-            },
-        }
+            }
 
-        result_generator = test_func(context)
-        result_data = next(result_generator)
+        storage = LocalStorage()
 
-        # we can't directly test the functionality of func_to_bind because when it is set as an attribute on a mock object, it becomes a mock. But we can assert that there is something there.
-        assert "func_spec" in result_data["config"]
+        executor = Executor(config, storage)
 
-        result_data["config"].pop("func_spec")
-
-        self.assertDictEqual(
-            result_data,
-            {
-                "config": {
-                    "lib_func": "testiboi.func_to_bind",
-                    "input_keys": ["xxx.yyy.zzz", "vvv.uuu.www"],
-                    "output_keys": ["mmm.nnn.ooo"],
-                    "input_bindings": ["{config.custom_properties.?}"],
-                    "output_bindings": ["message.body.payload"],
-                    "custom_properties": {"111": {"222": "333"}, "444": "555"},
-                },
-                "message": {
-                    "body": "modified data",
-                },
-            },
-        )
+        # we can't directly test the functionality of the function because when it is set as an attribute on a mock object, it becomes a mock. But we can assert that there is something there.
+        self.assertIsNotNone(executor._func_spec)
+        self.assertEquals(storage, executor.storage)
 
 
 if __name__ == "__main__":
