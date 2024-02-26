@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 from unittest import mock
+from pipeline_orchestrator.__main__ import pass_message
 
 from mock import Mock
 import hypergo.hyperdash as _
@@ -525,18 +526,10 @@ class TestCompression(unittest.TestCase):
         })
 
 class TestInit(unittest.TestCase):
-    @mock.patch("importlib.import_module")
-    def test_bind_func(self, mock_import_module):
-        def func_to_bind():
-            yield True
-
-        mock_module = mock.Mock()
-        setattr(mock_module, 'func_to_bind', func_to_bind)
-
-        mock_import_module.return_value = mock_module
-
+    # @mock.patch("importlib.import_module")
+    def test_bind_func(self):
         config = {
-                "lib_func": "testiboi.func_to_bind",
+                "lib_func": "pipeline_orchestrator.__main__.pass_message",
                 "input_keys": ["xxx.yyy.zzz", "vvv.uuu.www"],
                 "output_keys": ["mmm.nnn.ooo"],
                 "input_bindings": ["{config.custom_properties.?}"],
@@ -548,8 +541,7 @@ class TestInit(unittest.TestCase):
 
         executor = Executor(config, storage)
 
-        # we can't directly test the functionality of the function because when it is set as an attribute on a mock object, it becomes a mock. But we can assert that there is something there.
-        self.assertIsNotNone(executor._func_spec)
+        self.assertEquals(executor._func_spec, pass_message)
         self.assertEquals(storage, executor.storage)
 
 
