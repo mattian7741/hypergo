@@ -323,27 +323,110 @@ class TestPassByReference(unittest.TestCase):
         os.chdir(self.original_cwd)
         self.temp_dir.cleanup()
 
-    @mock.patch("hypergo.hyperdash.unique_identifier", return_value="unique_storage_key")
-    def test_passbyreference(self, mock_unique_identifier):
+    @mock.patch("hypergo.local_storage.LocalStorage.load")
+    @mock.patch("hypergo.local_storage.LocalStorage.save")
+    def test_no_input_operations_no_output_operations(self, mock_save, mock_load):
         storage = LocalStorage()
 
         @Executor.passbyreference
         def test_func(mock_executor, data):
-            message_body_in_the_function = data["message"]["body"]
+            message_body_in_the_function = data["message"]["body"]["some"]
 
-            yield {"message": {"body": f"modified {message_body_in_the_function}"}}
+            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
 
-        data = {"message": {"body": "data"}, "storage": storage}
+            yield data
 
-        # It's awkward to use this function in a passbyreference test. Need to rethink.
-        Executor.storebyreference(
-            data, "message.body", storage.use_sub_path("passbyreference/")
-        )
+        data = {"message": {"body": {"some": "data"}}, "storage": storage, 
+                    "config": {}}
 
         result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
-        self.assertEqual(result_data["message"]["body"], "unique_storage_key")
+        mock_load.assert_not_called()
+        mock_save.assert_not_called()
+
+        self.assertEqual(
+            {
+                "message": {
+                    "body": {
+                        "some": "modified data"
+                    }
+                }, "storage": storage, 
+                    "config": {}
+            },
+            result_data,
+        )
+
+    @mock.patch("hypergo.hyperdash.unique_identifier", return_value="unique_storage_key")
+    def test_input_operations_no_output_operations(self, mock_unique_identifier):
+        storage = LocalStorage()
+
+        @Executor.passbyreference
+        def test_func(mock_executor, data):
+
+            message_body_in_the_function = data["message"]["body"]["some"]
+
+            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
+
+            yield data
+
+        data = {"message": {"body": {"some": "data"}}, "storage": storage, 
+                    "config": {"input_operations": {"passbyreference": ["message.body.some"]}}}
+        
+        Executor.storebyreference(
+            data, "message.body.some", storage.use_sub_path("passbyreference/")
+        )
+        
+        with mock.patch.object(Executor, 'storebyreference') as mock_store_by_reference:
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            mock_store_by_reference.assert_not_called()
+    
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "modified data"
+                        }
+                    }, "storage": storage, 
+                        "config": {"input_operations": {"passbyreference": ["message.body.some"]}}
+                },
+                result_data,
+            )
+
+    @mock.patch("hypergo.hyperdash.unique_identifier", return_value="unique_storage_key")
+    def test_output_operations_no_input_operations(self, mock_unique_identifier):
+        storage = LocalStorage()
+
+        @Executor.passbyreference
+        def test_func(mock_executor, data):
+            message_body_in_the_function = data["message"]["body"]["some"]
+
+            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
+
+            yield data
+
+        data = {"message": {"body": {"some": "data"}}, "storage": storage, 
+                    "config": {"output_operations": {"passbyreference": ["message.body.some"]}}}
+        
+        with mock.patch.object(Executor, 'fetchbyreference') as mock_fetch_by_reference:
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            mock_fetch_by_reference.assert_not_called()
+    
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "unique_storage_key"
+                        }
+                    }, "storage": storage, 
+                        "config": {"output_operations": {"passbyreference": ["message.body.some"]}}
+                },
+                result_data,
+            )
 
         expected_file_path = os.path.join(
             ".hypergo_storage", "passbyreference", "unique_storage_key"
@@ -356,6 +439,171 @@ class TestPassByReference(unittest.TestCase):
             self.assertEqual(
                 file.read(),
                 '"modified data"',
+                "File content does not match expected",
+            )
+
+
+    def test_input_operations_and_output_operations(self):
+        storage = LocalStorage()
+
+        @Executor.passbyreference
+        def test_func(mock_executor, data):
+            message_body_in_the_function = data["message"]["body"]["some"]
+
+            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
+
+            yield data
+
+        data = {
+            "message": {
+                "body": {
+                    "some": "data"
+                }
+            },
+            "storage": storage, 
+            "config": {
+                "input_operations": {
+                    "passbyreference": ["message.body.some"]
+                },
+                "output_operations": {
+                    "passbyreference": ["message.body.some"]
+                }
+            }
+        }
+
+        with mock.patch.object(_, 'unique_identifier', return_value="input_storage_key"):
+            Executor.storebyreference(
+                data, "message.body.some", storage.use_sub_path("passbyreference/")
+            )
+        
+        with mock.patch.object(_, 'unique_identifier', return_value="output_storage_key"):
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+        self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "output_storage_key"
+                        }
+                    },
+                    "storage": storage, 
+                    "config": {
+                        "input_operations": {
+                            "passbyreference": ["message.body.some"]
+                        },
+                        "output_operations": {
+                            "passbyreference": ["message.body.some"]
+                        }
+                    }
+                },
+                result_data,
+            )
+
+        expected_file_path = os.path.join(
+            ".hypergo_storage", "passbyreference", "output_storage_key"
+        )
+
+        self.assertTrue(
+            os.path.exists(expected_file_path), "File was not created as expected"
+        )
+        with open(expected_file_path, "r", encoding="utf-8") as file:
+            self.assertEqual(
+                file.read(),
+                '"modified data"',
+                "File content does not match expected",
+            )
+
+    def test_multiple_input_operations_and_multiple_output_operations(self):
+        storage = LocalStorage()
+
+        @Executor.passbyreference
+        def test_func(mock_executor, data):
+            some_message_body_in_the_function = data["message"]["body"]["some"]
+            more_message_body_in_the_function = data["message"]["body"]["more"]
+
+            data["message"]["body"]["some"] = f"modified {some_message_body_in_the_function}"
+            data["message"]["body"]["more"] = f"more modified {more_message_body_in_the_function}"
+
+            yield data
+
+        data = {
+            "message": {
+                "body": {
+                    "some": "data",
+                    "more": "other data"
+                }
+            },
+            "storage": storage, 
+            "config": {
+                "input_operations": {
+                    "passbyreference": ["message.body.some", "message.body.more"]
+                },
+                "output_operations": {
+                    "passbyreference": ["message.body.some", "message.body.more"]
+                }
+            }
+        }
+
+        with mock.patch.object(_, 'unique_identifier', side_effect=["input_storage_key_some", "input_storage_key_more"]):
+            Executor.storebyreference(
+                data, "message.body.some", storage.use_sub_path("passbyreference/")
+            )
+
+            Executor.storebyreference(
+                data, "message.body.more", storage.use_sub_path("passbyreference/")
+            )
+        
+        with mock.patch.object(_, 'unique_identifier', side_effect=["output_storage_key_some", "output_storage_key_more"]):
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+        self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "output_storage_key_some",
+                            "more": "output_storage_key_more"
+                        }
+                    },
+                    "storage": storage, 
+                    "config": {
+                        "input_operations": {
+                            "passbyreference": ["message.body.some", "message.body.more"]
+                        },
+                        "output_operations": {
+                            "passbyreference": ["message.body.some", "message.body.more"]
+                        }
+                    }
+                },
+                result_data,
+            )
+
+        expected_file_path = os.path.join(
+            ".hypergo_storage", "passbyreference", "output_storage_key_some"
+        )
+
+        self.assertTrue(
+            os.path.exists(expected_file_path), "File was not created as expected"
+        )
+        with open(expected_file_path, "r", encoding="utf-8") as file:
+            self.assertEqual(
+                file.read(),
+                '"modified data"',
+                "File content does not match expected",
+            )
+
+        expected_file_path = os.path.join(
+            ".hypergo_storage", "passbyreference", "output_storage_key_more"
+        )
+
+        self.assertTrue(
+            os.path.exists(expected_file_path), "File was not created as expected"
+        )
+        with open(expected_file_path, "r", encoding="utf-8") as file:
+            self.assertEqual(
+                file.read(),
+                '"more modified other data"',
                 "File content does not match expected",
             )
 
@@ -570,6 +818,12 @@ class TestEncryption(unittest.TestCase):
                 },
                 result_data,
             )
+        
+    def test_multiple_input_operations(self, mock_encrypt, mock_decrypt):
+        pass
+
+    def test_multiple_output_operations(self, mock_encrypt, mock_decrypt):
+        pass
 
 
 class TestTransactions(unittest.TestCase):
@@ -765,7 +1019,6 @@ class TestInit(unittest.TestCase):
 
         self.assertEquals(executor._func_spec, pass_message)
         self.assertEquals(storage, executor.storage)
-
 
 if __name__ == "__main__":
     unittest.main()

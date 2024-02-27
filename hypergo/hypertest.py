@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import re
+from copy import deepcopy
 from functools import wraps
 from typing import (Any, Callable, Dict, Generator, List, Mapping, Match,
                     Optional, Set, TypeVar, Union, cast)
@@ -10,8 +11,6 @@ from hypergo.config import ConfigType
 from hypergo.local_storage import LocalStorage
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
-
-from copy import deepcopy
 
 T = TypeVar("T")
 ENCRYPTIONKEY = "KRAgZMBXbP1OQQEJPvMTa6nfkVq63sgL2ULJIaMgfLA="
@@ -247,25 +246,30 @@ class Executor:
 
     @staticmethod
     def passbyreference(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
-        # TODO: This doesn't work if the data isn't already in storage. It needs
-        # to read the config to determine what to passbyreference and what not
-        # to
         @wraps(func)
         def wrapper(self, data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
-            print(f"I'm in passbyreference self: {self} data: {data}\n")
-            results = func(
-                self,
-                Executor.fetchbyreference(data, "message.body", _.deep_get(data, "storage").use_sub_path("passbyreference/")),
-                *args,
-                **kwargs,
-            )
-            for result in results:
-                yield Executor.storebyreference(
-                    result, "message.body", _.deep_get(data, "storage").use_sub_path("passbyreference/")
+            input_operations = _.deep_get(data, "config.input_operations.passbyreference", [])
+
+            print(f"I'm in the beginning of passbyreference. input_operations: {input_operations} data: {data}\n")
+
+            for datum_to_fetch in input_operations:
+                data = Executor.fetchbyreference(
+                    data, datum_to_fetch, _.deep_get(data, "storage").use_sub_path("passbyreference/")
                 )
+    
+            results = func(self, data, *args, *kwargs)
+
+            for result in results:
+                output_operations = _.deep_get(data, "config.output_operations.passbyreference", [])
+
+                for datum_to_store in output_operations:
+                    result = Executor.storebyreference(
+                        result, datum_to_store, _.deep_get(data, "storage").use_sub_path("passbyreference/")
+                    )
+
+                yield result
 
         return wrapper
-
 
     @_.root_node
     @staticmethod
@@ -273,7 +277,6 @@ class Executor:
         out_storage_key = f"{_.unique_identifier('storagekey')}"
         storage.save(out_storage_key, _.stringify(_.deep_get(data, key)))
         return _.deep_set(data, key, out_storage_key)
-
 
     @_.root_node
     @staticmethod
@@ -289,7 +292,7 @@ class Executor:
             print(f"I'm in encryption. data: {data}\n")
 
             for datum_to_decrypt in input_operations:
-               data = _.decrypt(data, datum_to_decrypt, ENCRYPTIONKEY)
+                data = _.decrypt(data, datum_to_decrypt, ENCRYPTIONKEY)
 
             results = func(self, data, *args, *kwargs)
 
@@ -299,7 +302,6 @@ class Executor:
                     result = _.encrypt(data, datum_to_encrypt, ENCRYPTIONKEY)
 
                 yield result
-                
 
         return wrapper
 
