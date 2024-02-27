@@ -54,11 +54,36 @@ class TestBasicCase(unittest.TestCase):
         os.chdir(self.original_cwd)
         self.temp_dir.cleanup()
 
-    @mock.patch("hypergo.hypertest.the_function", test_func)
-    def test_basic_case(self, mock_test_func):
+    def test_basic_case(self):
+        config = {
+            "version": "2.0.0",
+            "namespace": "datalink",
+            "name": "syncdbtapitriggerconnector",
+            "package": "ldp-pipeline-orchestrator",
+            "lib_func": "pipeline_orchestrator.__main__.pass_message",
+            "input_keys": ["json.record.sync_dbt.api_log_datum"],
+            "output_keys": ["api_trigger.request.sync_dbt.api_log_datum"],
+            "input_bindings": ["{message.body.json_datum}"],
+            "output_bindings": ["message.body"],
+            "input_operations": {},
+            "output_operations": {}
+        }
+
         message = {
-            "routingkey": "x.y.z",
-            "body": {"a": {"fn": lambda m, n: (m + n) / (m * n), "x": 23, "y": 41}}
+            "routingkey": "api_log_datum.json.record.sync_dbt",
+            "body": {
+                "json_datum": {
+                    "DBT_MODEL": "PAYMENT",
+                    "BATCHID": "20220718085603627",
+                    "MASTERURL": "https://login.microsoftonline.com/d6130c51-e1f1-43fa-b6cb-9634098b05a6/oauth2/v2.0/token",
+                    "CLIENTID": "d2b5cbdc-d5b7-44d9-925a-97187476bdce",
+                    "CLIENTSECRET": "_WO8Q~iNgH38U7kyqtEcuE~aD51wKsEYrVN3IaoH",
+                    "SUBSCRIPTIONKEY": "49e9c5c615c444019c9c3c7fac8fe469",
+                    "SCOPE": "api://8ab3e011-1a1a-4ed2-91a5-646d7030e0f6/.default",
+                    "POSTURL": "https://dev-api.linklogistics.com/change-data-capture/v1/trigger/ws-customer"
+                }
+            },
+            "transaction": "transactionkey_20230918002901587329f648735b"
         }
         serialized_message = _.serialize(message, "body")
         compressed_message = _.compress(serialized_message, "body")

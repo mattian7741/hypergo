@@ -360,26 +360,216 @@ class TestPassByReference(unittest.TestCase):
             )
 
 
-class TestEncryptDecrypt(unittest.TestCase):
-    # TODO: rewrite this once @encryption responds to configs appropriately
-    def test_encrypt_decrypt(self):
+class TestEncryption(unittest.TestCase):
+    @mock.patch("hypergo.hyperdash.decrypt")
+    @mock.patch("hypergo.hyperdash.encrypt")
+    def test_no_input_operations_no_output_operations(self, mock_encrypt, mock_decrypt):
+            @Executor.encryption
+            def test_func(mock_executor, data):
+                message_body_in_the_function = data["message"]["body"]["some"]
+
+                yield {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function}"
+                        }
+                    },
+                    "config": {}
+                }
+
+            data = {
+                "message": {
+                    "body": {
+                        "some": "data"
+                    }
+                },
+                "config": {}
+            }
+
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            mock_decrypt.assert_not_called()
+            mock_encrypt.assert_not_called()
+
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "modified data"
+                        }
+                    },
+                    "config": {}
+                },
+                result_data,
+            )
+    
+    @mock.patch("hypergo.hyperdash.encrypt")
+    def test_decrypt_no_encrypt(self, mock_encrypt):
+            @Executor.encryption
+            def test_func(mock_executor, data):
+                message_body_in_the_function = data["message"]["body"]["some"]
+
+                yield {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function}"
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "encryption": ["message.body.some"]
+                        }
+                    }
+                }
+
+            data = {
+                "message": {
+                    "body": {
+                        "some": "gAAAAABl3SPw4O7eEHvToDAYiYXlD6fhSfj0JLt8b7sDstCFI2ed-EcYgVxcFaA4WvWEBN_kCcO9b3x5MTO3h_jdcWaZfYmqCg=="
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "encryption": ["message.body.some"]
+                    }
+                }
+            }
+
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            mock_encrypt.assert_not_called()
+
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "modified data"
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "encryption": ["message.body.some"]
+                        }
+                    }
+                },
+                result_data,
+            )
+    
+    @mock.patch("hypergo.hyperdash.decrypt")
+    @mock.patch("cryptography.fernet.Fernet.encrypt", return_value=b'data')
+    def test_encrypt_no_decrypt(self, mock_fernet_encrypt, mock_decrypt):
+            @Executor.encryption
+            def test_func(mock_executor, data):
+                message_body_in_the_function = data["message"]["body"]["some"]
+
+                yield {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function}"
+                        }
+                    },
+                    "config": {
+                        "output_operations": {
+                            "encryption": ["message.body.some"]
+                        }
+                    }
+                }
+
+            data = {
+                "message": {
+                    "body": {
+                        "some": "data"
+                    }
+                },
+                "config": {
+                    "output_operations": {
+                        "encryption": ["message.body.some"]
+                    }
+                }
+            }
+
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            mock_decrypt.assert_not_called()
+
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": b'data'.decode("utf-8")
+                        }
+                    },
+                    "config": {
+                        "output_operations": {
+                            "encryption": ["message.body.some"]
+                        }
+                    }
+                },
+                result_data,
+            )
+
+    @mock.patch("cryptography.fernet.Fernet.encrypt", return_value=b'data')
+    def test_encrypt_decrypt(self, mock_fernet_encrypt):
         @Executor.encryption
         def test_func(mock_executor, data):
-            message_body_in_the_function = data["message"]["body"]
+            message_body_in_the_function = data["message"]["body"]["some"]
 
-            yield {"message": {"body": f"modified {message_body_in_the_function}"}}
+            yield {
+                "message": {
+                    "body": {
+                        "some": f"modified {message_body_in_the_function}"
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "encryption": ["message.body.some"]
+                    },
+                    "output_operations": {
+                        "encryption": ["message.body.some"]
+                    }
+                }
+            }
 
-        data = {"message": {"body": "data"}}
-
-        _.encrypt(data, "message.body", ENCRYPTIONKEY)
+        data = {
+                "message": {
+                    "body": {
+                        "some": "gAAAAABl3SPw4O7eEHvToDAYiYXlD6fhSfj0JLt8b7sDstCFI2ed-EcYgVxcFaA4WvWEBN_kCcO9b3x5MTO3h_jdcWaZfYmqCg=="
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "encryption": ["message.body.some"]
+                    },
+                    "output_operations": {
+                        "encryption": ["message.body.some"]
+                    }
+                }
+            }
 
         result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
         self.assertEqual(
-            _.decrypt(result_data, "message.body", ENCRYPTIONKEY),
-            {"message": {"body": "modified data"}},
-        )
+                {
+                    "message": {
+                        "body": {
+                            "some": b'data'.decode("utf-8")
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "encryption": ["message.body.some"]
+                        },
+                        "output_operations": {
+                            "encryption": ["message.body.some"]
+                        }
+                    }
+                },
+                result_data,
+            )
 
 
 class TestTransactions(unittest.TestCase):

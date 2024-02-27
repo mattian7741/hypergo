@@ -284,10 +284,22 @@ class Executor:
     def encryption(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
         @wraps(func)
         def wrapper(self, data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
-            print(f"I'm in encryption. self: {self} data: {data}\n")
-            results = func(self, _.decrypt(data, "message.body", ENCRYPTIONKEY), *args, **kwargs)
+            input_operations = _.deep_get(data, "config.input_operations.encryption", [])
+
+            print(f"I'm in encryption. data: {data}\n")
+
+            for datum_to_decrypt in input_operations:
+               data = _.decrypt(data, datum_to_decrypt, ENCRYPTIONKEY)
+
+            results = func(self, data, *args, *kwargs)
+
             for result in results:
-                yield _.encrypt(result, "message.body", ENCRYPTIONKEY)
+                output_operations = _.deep_get(data, "config.output_operations.encryption", [])
+                for datum_to_encrypt in output_operations:
+                    result = _.encrypt(data, datum_to_encrypt, ENCRYPTIONKEY)
+
+                yield result
+                
 
         return wrapper
 
