@@ -327,14 +327,14 @@ class TestCompress(unittest.TestCase):
 
 class TestUncompress(unittest.TestCase):
     def test_uncompress_no_key(self):
-        result = _.uncompress(
+        result = _.decompress(
             "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla"
         )
 
         self.assertEqual(result, {"abc": "def"})
 
     def test_uncompress_with_key(self):
-        result = _.uncompress(
+        result = _.decompress(
             {
                 "abc": {
                     "def": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAJeyJnaGkiOiAxfQAAAIMiUr9PqR/CAAEiChUa4WcftvN9AQAAAAAEWVo=",

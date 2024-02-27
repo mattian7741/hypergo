@@ -665,6 +665,38 @@ class TestTransactions(unittest.TestCase):
                 "File content does not match expected",
             )
 
+class TestSerialization(unittest.TestCase):
+    def test_serialization(self):
+        storage = LocalStorage()
+
+        data = {
+            "message": {
+                "body": "data",
+            }
+        }
+
+        @Executor.serialization
+        def test_func(mock_executor, data):
+            message_body_in_the_function = data["message"]["body"]
+
+            data["message"]["body"] = f"modified {message_body_in_the_function}"
+
+            yield data
+        
+        serialized = _.serialize(data, "message.body")
+
+        # Execute the decorated generator with compressed input data
+        generator = test_func(Mock(), serialized)
+        result_data = next(generator)
+
+        deserialized_result_data = _.deserialize(result_data, "message.body")
+
+        self.assertDictEqual(deserialized_result_data, {
+            "message": {
+                "body": "modified data",
+            }
+        })
+
 
 class TestBindArguments(unittest.TestCase):
     def test_encrypt_decrypt(self):
