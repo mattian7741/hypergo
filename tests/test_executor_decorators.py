@@ -1,5 +1,5 @@
 import base64
-import inspect
+from cryptography.fernet import Fernet
 import os
 import tempfile
 import unittest
@@ -819,11 +819,57 @@ class TestEncryption(unittest.TestCase):
                 result_data,
             )
         
-    def test_multiple_input_operations(self, mock_encrypt, mock_decrypt):
-        pass
+    def test_multiple_input_operations_and_multiple_output_operations(self):
+        @Executor.encryption
+        def test_func(mock_executor, data):
+            some_message_body_in_the_function = data["message"]["body"]["some"]
+            more_message_body_in_the_function = data["message"]["body"]["more"]
 
-    def test_multiple_output_operations(self, mock_encrypt, mock_decrypt):
-        pass
+            data["message"]["body"]["some"] = f"modified {some_message_body_in_the_function}"
+            data["message"]["body"]["more"] = f"more modified {more_message_body_in_the_function}"
+
+            yield data
+
+        data = {
+                "message": {
+                    "body": {
+                        "some": "gAAAAABl3SPw4O7eEHvToDAYiYXlD6fhSfj0JLt8b7sDstCFI2ed-EcYgVxcFaA4WvWEBN_kCcO9b3x5MTO3h_jdcWaZfYmqCg==",
+                        "more": "gAAAAABl3mGvSnrJheloWItYscXnTJLV9F7I5M85qPirjbrxJ55-VER0RSSRXy2IDqGB-I5Se0OzgzGlWQg4ROzBdmWBhdIZbQ=="
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "encryption": ["message.body.some", "message.body.more"]
+                    },
+                    "output_operations": {
+                        "encryption": ["message.body.some", "message.body.more"]
+                    }
+                }
+            }
+        
+        with mock.patch.object(Fernet, 'encrypt', side_effect=[b'output_encryption_some', b'output_encryption_more']):
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+        self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": b'output_encryption_some'.decode("utf-8"),
+                            "more": b'output_encryption_more'.decode("utf-8")
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "encryption": ["message.body.some", "message.body.more"]
+                        },
+                        "output_operations": {
+                            "encryption": ["message.body.some", "message.body.more"]
+                        }
+                    }
+                },
+                result_data,
+            )
 
 
 class TestTransactions(unittest.TestCase):
