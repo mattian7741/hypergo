@@ -256,7 +256,7 @@ class Executor:
                 data = Executor.fetchbyreference(
                     data, datum_to_fetch, _.deep_get(data, "storage").use_sub_path("passbyreference/")
                 )
-    
+
             results = func(self, data, *args, *kwargs)
 
             for result in results:
@@ -310,9 +310,18 @@ class Executor:
         @wraps(func)
         def wrapper(self, data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
             print(f"I'm in compression. self: {self} data: {data}\n")
-            results = func(self, _.decompress(data, "message.body"), *args, **kwargs)
+            input_operations = _.deep_get(data, "config.input_operations.compression", [])
+            for datum_to_decompress in input_operations:
+                data = _.decompress(data, datum_to_decompress)
+
+            results = func(self, data, *args, *kwargs)
+
             for result in results:
-                yield _.compress(result, "message.body")
+                output_operations = _.deep_get(data, "config.output_operations.compression", [])
+                for datum_to_compress in output_operations:
+                    result = _.compress(data, datum_to_compress)
+
+                yield result
 
         return wrapper
 

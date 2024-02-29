@@ -1013,39 +1013,192 @@ class TestStreaming(unittest.TestCase):
         pass
 
 class TestCompression(unittest.TestCase):
-    # TODO: rewrite this once @compression responds to configs appropriately
-    def test_compression(self):
-        storage = LocalStorage()
+    def test_no_decompress_no_compress(self):
+        @Executor.compression
+        def test_func(mock_executor, data):
+            message_body_in_the_function = data["message"]["body"]["some"]
+
+            yield {
+                "message": {
+                    "body": {
+                        "some": f"modified {message_body_in_the_function}"
+                    }
+                },
+                "config": {}
+            }
 
         data = {
             "message": {
-                "body": "data",
+                "body": {
+                    "some": "data"
+                }
             },
-            "storage": storage,
+            "config": {}
         }
 
-        @Executor.compression
-        def test_func(mock_executor, data):
-            message_body_in_the_function = data["message"]["body"]
-
-            data["message"]["body"] = f"modified {message_body_in_the_function}"
-
-            yield data
-        
-        compressed_data = _.compress(data, "message.body")
-
-        # Execute the decorated generator with compressed input data
-        generator = test_func(Mock(), compressed_data)
+        generator = test_func(Mock(), data)
         result_data = next(generator)
 
-        decompressed_result_data = _.decompress(result_data, "message.body")
-
-        self.assertDictEqual(decompressed_result_data, {
+        self.assertDictEqual(result_data, {
             "message": {
-                "body": "modified data",
+                "body": {
+                    "some": "modified data"
+                }
             },
-            "storage": storage,
+            "config": {}
         })
+
+    def test_decompress_no_compress(self):
+            @Executor.compression
+            def test_func(mock_executor, data):
+                message_body_in_the_function = data["message"]["body"]["some"]
+
+                yield {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function}"
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "compression": ["message.body.some"]
+                        }
+                    }
+                }
+
+            data = {
+                "message": {
+                    "body": {
+                        "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAFImRhdGEiAAAAi9GTyyyJmsYAAR4GwS+kHR+2830BAAAAAARZWg=="
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "compression": ["message.body.some"]
+                    }
+                }
+            }
+
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "modified data"
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "compression": ["message.body.some"]
+                        }
+                    }
+                },
+                result_data,
+            )
+
+
+    def test_compress_no_decompress(self):
+            @Executor.compression
+            def test_func(mock_executor, data):
+                message_body_in_the_function = data["message"]["body"]["some"]
+
+                yield {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function}"
+                        }
+                    },
+                    "config": {
+                        "output_operations": {
+                            "compression": ["message.body.some"]
+                        }
+                    }
+                }
+
+            data = {
+                "message": {
+                    "body": {
+                        "some": "data"
+                    }
+                },
+                "config": {
+                    "output_operations": {
+                        "compression": ["message.body.some"]
+                    }
+                }
+            }
+
+            result_generator = test_func(Mock(), data)
+            result_data = next(result_generator)
+
+            self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAFImRhdGEiAAAAi9GTyyyJmsYAAR4GwS+kHR+2830BAAAAAARZWg=="
+                        }
+                    },
+                    "config": {
+                        "output_operations": {
+                            "compression": ["message.body.some"]
+                        }
+                    }
+                },
+                result_data,
+            )
+
+    def test_multiple_input_operations_and_multiple_output_operations(self):
+        @Executor.compression
+        def test_func(mock_executor, data):
+            some_message_body_in_the_function = data["message"]["body"]["some"]
+            more_message_body_in_the_function = data["message"]["body"]["more"]
+
+            data["message"]["body"]["some"] = f"modified {some_message_body_in_the_function}"
+            data["message"]["body"]["more"] = f"more modified {more_message_body_in_the_function}"
+
+            yield data
+
+        data = {
+                "message": {
+                    "body": {
+                        "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAFImRhdGEiAAAAi9GTyyyJmsYAAR4GwS+kHR+2830BAAAAAARZWg==",
+                        "more": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQALIm90aGVyIGRhdGEiAAtpz/XnzYnGAAEkDKYY2NgftvN9AQAAAAAEWVo="
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "compression": ["message.body.some", "message.body.more"]
+                    },
+                    "output_operations": {
+                        "compression": ["message.body.some", "message.body.more"]
+                    }
+                }
+            }
+
+        result_generator = test_func(Mock(), data)
+        result_data = next(result_generator)
+
+        self.assertEqual(
+                {
+                    "message": {
+                        "body": {
+                            "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAOIm1vZGlmaWVkIGRhdGEiAAA5neHY2S7+AAABJw/fGvxqH7bzfQEAAAAABFla",
+                            "more": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAZIm1vcmUgbW9kaWZpZWQgb3RoZXIgZGF0YSIAAACGG9aNDEr3zQABMhogGJQwH7bzfQEAAAAABFla"
+                        }
+                    },
+                    "config": {
+                        "input_operations": {
+                            "compression": ["message.body.some", "message.body.more"]
+                        },
+                        "output_operations": {
+                            "compression": ["message.body.some", "message.body.more"]
+                        }
+                    }
+                },
+                result_data,
+            )
 
 class TestInit(unittest.TestCase):
     # @mock.patch("importlib.import_module")
