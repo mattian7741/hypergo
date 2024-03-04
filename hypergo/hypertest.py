@@ -416,15 +416,12 @@ class Executor:
 
             for result in func(self, Executor._get_args(_.deep_get(data, "config.input_bindings")), *args, **kwargs):
                 print(f"bind arguments result: {result}")
-                # TODO: new functionality
-                for binding in zip(_.deep_get(result, "config.output_bindings")):
-                    data.update(binding)
-                    # TODO: this does NOT zip together output_keys and results and
-                    # send one message to each. Instead, for each result, it sends
-                    # a message to all output_keys. in other words, we get MxN
-                    # messages
-                    for output_key in _.deep_get(data, "config.output_keys"):
-                        yield _.deep_set(data, "message.routingkey", output_key)
+                # TODO: this does NOT zip together output_keys and results and
+                # send one message to each. Instead, for each result, it sends
+                # a message to all output_keys. in other words, we get MxN
+                # messages
+                for output_key in _.deep_get(data, "config.output_keys"):
+                    yield _.deep_set(data, "message.routingkey", output_key)
 
         return wrapper
 
