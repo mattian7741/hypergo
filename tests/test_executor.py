@@ -44,7 +44,9 @@ class TestExecute(unittest.TestCase):
         result_generator = executor.execute(message)
         result = next(result_generator)
 
-        self.assertDictEqual({"routingkey": "result.output.keys", "body": {}, "transaction": "transactionkey_unique_storage_key"}, result)
+        print(f"end result: {result}")
+
+        self.assertDictEqual({"routingkey": "result.output.keys", "message": {"body": "some data"}, "transaction": "transactionkey_unique_storage_key"}, result)
 
     @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="unique_storage_key")
     def test_simple_substitution(self, mock_unique_identifier):
@@ -73,9 +75,7 @@ class TestExecute(unittest.TestCase):
         result_generator = executor.execute(message)
         result = next(result_generator)
 
-        print(f"result: {result}")
-
-        self.assertDictEqual({"routingkey": "result.output.keys", "body": {'some': 'data'}, "transaction": "transactionkey_unique_storage_key"}, result)
+        self.assertDictEqual({"routingkey": "result.output.keys", "message": {"body": "data"}, "transaction": "transactionkey_unique_storage_key"}, result)
 
 
 if __name__ == "__main__":

@@ -197,10 +197,10 @@ class Executor:
             print(f"I'm in contextualize. self: {self} Data: {message}\n")
             # _.deep_set(the_context, "input", data)
             yield from (
-                _.deep_get(result, "message")
+                _.deep_get(result, "output")
                 for result in func(
                     self,
-                    {"config": deepcopy(self.config), "message": message, "storage": self.storage, "output": None},
+                    {"config": deepcopy(self.config), "message": message, "storage": self.storage, "output": {}},
                     *args,
                     **kwargs,
                 )
@@ -240,6 +240,7 @@ class Executor:
             print(f"I'm in substitutions. self: {self} data: {data}\n")
             results = func(self, Executor._handle_substitution(data, data), *args, **kwargs)
             for result in results:
+                print(f"I'm in substitutions {result}\n\n")
                 yield Executor._handle_substitution(result, result)
 
         return wrapper
@@ -267,6 +268,7 @@ class Executor:
                         result, datum_to_store, _.deep_get(data, "storage").use_sub_path("passbyreference/")
                     )
 
+                print(f"I'm in passbyreference {result}\n\n")
                 yield result
 
         return wrapper
@@ -301,6 +303,7 @@ class Executor:
                 for datum_to_encrypt in output_operations:
                     result = _.encrypt(data, datum_to_encrypt, ENCRYPTIONKEY)
 
+                print(f"I'm in encryption {result}\n\n")
                 yield result
 
         return wrapper
@@ -321,6 +324,7 @@ class Executor:
                 for datum_to_compress in output_operations:
                     result = _.compress(data, datum_to_compress)
 
+                print(f"I'm in compression {result}\n\n")
                 yield result
 
         return wrapper
@@ -333,6 +337,7 @@ class Executor:
             deserialized = _.deserialize(data, "message.body")
             results = func(self, deserialized, *args, **kwargs)
             for result in results:
+                print(f"I'm in serialization {result}\n\n")
                 yield _.serialize(result, "message.body")
 
         return wrapper
@@ -350,6 +355,7 @@ class Executor:
             )
 
             for result in results:
+                print(f"I'm in transactions {result}\n\n")
                 yield Executor._save_transaction(result, _.deep_get(data, "storage").use_sub_path("transactions"))
 
         return wrapper
@@ -365,7 +371,7 @@ class Executor:
         transaction: Transaction = _.deep_get(data, "transaction")
         txkey: str = f"transactionkey_{transaction.txid}"
         storage.save(txkey, str(transaction))
-        return _.deep_set(data, "message.transaction", txkey)
+        return _.deep_set(data, "output.transaction", txkey)
 
     @staticmethod
     def _replace_wildcard_from_routingkey(data: Union[List[Any], Dict[str, Any]], input_string: Any) -> str:
@@ -413,12 +419,14 @@ class Executor:
 
             for result in func(self, *arguments, *args, **kwargs):
                 print(f"bind arguments result: {result}")
+                for output_binding in _.deep_get(data, "config.output_bindings"):
+                    data = _.deep_set(data, f"output.{output_binding}", result)
                 # TODO: this does NOT zip together output_keys and results and
                 # send one message to each. Instead, for each result, it sends
                 # a message to all output_keys. in other words, we get MxN
                 # messages
                 for output_key in _.deep_get(data, "config.output_keys"):
-                    yield _.deep_set(data, "message.routingkey", output_key)
+                    yield _.deep_set(data, "output.routingkey", output_key)
 
         return wrapper
 
