@@ -386,17 +386,14 @@ class Executor:
         return ".".join(node_path)
 
     @staticmethod
-    def _get_args(args: List[Any]) -> List[Any]:
-        def fn_spec(fn_name: str) -> Callable[..., Any]:
-            tokens: List[str] = fn_name.split(".")
-            return cast(Callable[..., Any], (getattr(importlib.import_module(".".join(tokens[:-1])), tokens[-1])))
-
-        def a_spec(func: Callable[..., Any]) -> List[type]:
-            params: Mapping[str, inspect.Parameter] = inspect.signature(func).parameters
+    def _get_args(function: Callable[..., Any], args: List[Any]) -> List[Any]:
+        def a_spec(function: Callable[..., Any]) -> List[type]:
+            params: Mapping[str, inspect.Parameter] = inspect.signature(function).parameters
             return [params[k].annotation for k in list(params.keys())]
 
-        func_spec = fn_spec(_.deep_get(the_config, "lib_func"))
-        arg_spec = a_spec(func_spec)
+        arg_spec = a_spec(function)
+
+        print(f"I'm in get_args. args: {arg_spec}")
         params = []
         for arg, argtype in zip(args, arg_spec):
             val = arg
@@ -411,10 +408,10 @@ class Executor:
         @wraps(func)
         def wrapper(self, data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
             print(f"I'm in bind_arguments, self: {self} data is {data}\n")
-            arguments = Executor._get_args(_.deep_get(data, "config.input_bindings"))
-            print(f"I'm in bind_arguments. Args are: {arguments}\n")
+            arguments = Executor._get_args(self._func_spec, _.deep_get(data, "config.input_bindings"))
+            print(f"I'm in bind_arguments. Arguments are: {arguments} args are {args} kwargs are {kwargs}\n")
 
-            for result in func(self, Executor._get_args(_.deep_get(data, "config.input_bindings")), *args, **kwargs):
+            for result in func(self, *arguments, *args, **kwargs):
                 print(f"bind arguments result: {result}")
                 # TODO: this does NOT zip together output_keys and results and
                 # send one message to each. Instead, for each result, it sends
@@ -425,7 +422,7 @@ class Executor:
 
         return wrapper
 
-    @exceptions
+    # @exceptions
     # @unbatching
     # @batching
     @contextualize
@@ -441,11 +438,11 @@ class Executor:
     @substitutions
     # @mapping
     @bind_arguments
-    def execute(self, data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
-        print(f"execute self: {self} data: {data}")
+    def execute(self, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
+        print(f"execute self: {self} args: {[args]}, kwargs: {kwargs}")
 
         # yield from generatorize(the_function)(*data, *args, **kwargs)
-        for result in generatorize(self._func_spec)(*data, *args, **kwargs):
+        for result in generatorize(self._func_spec)(*args, **kwargs):
             yield result
 
 

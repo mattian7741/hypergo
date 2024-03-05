@@ -9,7 +9,7 @@ import hypergo.hyperdash as _
 from hypergo.local_storage import LocalStorage
 
 
-class TestBasicCase(unittest.TestCase):
+class TestExecute(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_cwd = os.getcwd()
@@ -36,7 +36,7 @@ class TestBasicCase(unittest.TestCase):
         }
 
         message = {
-            "routingkey": "api_log_datum.json.record.sync_dbt",
+            "routingkey": "some.test.keys",
             "body": {}
         }
         
@@ -45,6 +45,37 @@ class TestBasicCase(unittest.TestCase):
         result = next(result_generator)
 
         self.assertDictEqual({"routingkey": "result.output.keys", "body": {}, "transaction": "transactionkey_unique_storage_key"}, result)
+
+    @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="unique_storage_key")
+    def test_simple_substitution(self, mock_unique_identifier):
+        config = {
+            "version": "2.0.0",
+            "namespace": "datalink",
+            "name": "testcomponent",
+            "package": "ldp-pipeline-orchestrator",
+            "lib_func": "pipeline_orchestrator.__main__.pass_message",
+            "input_keys": ["some.test.keys"],
+            "output_keys": ["result.output.keys"],
+            "input_bindings": ["{message.body.some}"],
+            "output_bindings": ["message.body"],
+            "input_operations": {},
+            "output_operations": {}
+        }
+
+        message = {
+            "routingkey": "some.test.keys",
+            "body": {
+                "some": "data"
+            }
+        }
+
+        executor = Executor(config, LocalStorage())
+        result_generator = executor.execute(message)
+        result = next(result_generator)
+
+        print(f"result: {result}")
+
+        self.assertDictEqual({"routingkey": "result.output.keys", "body": {'some': 'data'}, "transaction": "transactionkey_unique_storage_key"}, result)
 
 
 if __name__ == "__main__":
