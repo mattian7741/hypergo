@@ -265,7 +265,7 @@ class Executor:
 
                 for datum_to_store in output_operations:
                     result = Executor.storebyreference(
-                        result, datum_to_store, _.deep_get(data, "storage").use_sub_path("passbyreference/")
+                        result, f"output.{datum_to_store}", _.deep_get(data, "storage").use_sub_path("passbyreference/")
                     )
 
                 print(f"I'm in passbyreference {result}\n\n")
@@ -273,7 +273,6 @@ class Executor:
 
         return wrapper
 
-    @_.root_node
     @staticmethod
     def storebyreference(data: Any, key: str, storage: Storage) -> Any:
         out_storage_key = f"{_.unique_identifier('storagekey')}"

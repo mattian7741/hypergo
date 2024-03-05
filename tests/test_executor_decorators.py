@@ -351,8 +351,9 @@ class TestPassByReference(unittest.TestCase):
                     "body": {
                         "some": "modified data"
                     }
-                }, "storage": storage, 
-                    "config": {}
+                },
+                "storage": storage,
+                "config": {}
             },
             result_data,
         )
@@ -366,16 +367,14 @@ class TestPassByReference(unittest.TestCase):
 
             message_body_in_the_function = data["message"]["body"]["some"]
 
-            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
-
+            data["output"] = {"message": {"body": {f"modified {message_body_in_the_function}"}}}
             yield data
 
-        data = {"message": {"body": {"some": "data"}}, "storage": storage, 
+        data = {"message": {"body": {"some": "unique_storage_key"}}, "storage": storage,
                     "config": {"input_operations": {"passbyreference": ["message.body.some"]}}}
-        
-        Executor.storebyreference(
-            data, "message.body.some", storage.use_sub_path("passbyreference/")
-        )
+
+        out_storage_key = f"{_.unique_identifier('storagekey')}"
+        storage.use_sub_path("passbyreference/").save(out_storage_key, '"data"')
         
         with mock.patch.object(Executor, 'storebyreference') as mock_store_by_reference:
             result_generator = test_func(Mock(), data)
@@ -387,10 +386,12 @@ class TestPassByReference(unittest.TestCase):
                 {
                     "message": {
                         "body": {
-                            "some": "modified data"
+                            "some": "data"
                         }
-                    }, "storage": storage, 
-                        "config": {"input_operations": {"passbyreference": ["message.body.some"]}}
+                    },
+                    "storage": storage,
+                    "config": {"input_operations": {"passbyreference": ["message.body.some"]}},
+                    "output": {"message": {"body": {f"modified data"}}}
                 },
                 result_data,
             )
@@ -401,14 +402,23 @@ class TestPassByReference(unittest.TestCase):
 
         @Executor.passbyreference
         def test_func(mock_executor, data):
+
             message_body_in_the_function = data["message"]["body"]["some"]
 
-            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
-
+            data["output"] = {"message": {"body": {"some": f"modified {message_body_in_the_function}"}}}
             yield data
 
-        data = {"message": {"body": {"some": "data"}}, "storage": storage, 
-                    "config": {"output_operations": {"passbyreference": ["message.body.some"]}}}
+        data = {
+            "message": {
+                "body": {
+                    "some": "data"
+                }
+            },
+            "storage": storage,
+            "config": {
+                "output_operations": {"passbyreference": ["message.body.some"]}
+            }
+        }
         
         with mock.patch.object(Executor, 'fetchbyreference') as mock_fetch_by_reference:
             result_generator = test_func(Mock(), data)
@@ -420,10 +430,22 @@ class TestPassByReference(unittest.TestCase):
                 {
                     "message": {
                         "body": {
-                            "some": "unique_storage_key"
+                            "some": "data"
                         }
-                    }, "storage": storage, 
-                        "config": {"output_operations": {"passbyreference": ["message.body.some"]}}
+                    },
+                    "storage": storage, 
+                    "config": {
+                        "output_operations": {
+                            "passbyreference": ["message.body.some"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "unique_storage_key"
+                            }
+                        }
+                    }
                 },
                 result_data,
             )
@@ -448,16 +470,16 @@ class TestPassByReference(unittest.TestCase):
 
         @Executor.passbyreference
         def test_func(mock_executor, data):
+
             message_body_in_the_function = data["message"]["body"]["some"]
 
-            data["message"]["body"]["some"] = f"modified {message_body_in_the_function}"
-
+            data["output"] = {"message": {"body": {"some": f"modified {message_body_in_the_function}"}}}
             yield data
 
         data = {
             "message": {
                 "body": {
-                    "some": "data"
+                    "some": "input_storage_key"
                 }
             },
             "storage": storage, 
@@ -472,9 +494,8 @@ class TestPassByReference(unittest.TestCase):
         }
 
         with mock.patch.object(_, 'unique_identifier', return_value="input_storage_key"):
-            Executor.storebyreference(
-                data, "message.body.some", storage.use_sub_path("passbyreference/")
-            )
+            out_storage_key = f"{_.unique_identifier('storagekey')}"
+            storage.use_sub_path("passbyreference/").save(out_storage_key, '"data"')
         
         with mock.patch.object(_, 'unique_identifier', return_value="output_storage_key"):
             result_generator = test_func(Mock(), data)
@@ -484,7 +505,7 @@ class TestPassByReference(unittest.TestCase):
                 {
                     "message": {
                         "body": {
-                            "some": "output_storage_key"
+                            "some": "data"
                         }
                     },
                     "storage": storage, 
@@ -494,6 +515,13 @@ class TestPassByReference(unittest.TestCase):
                         },
                         "output_operations": {
                             "passbyreference": ["message.body.some"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "output_storage_key"
+                            }
                         }
                     }
                 },
@@ -903,8 +931,9 @@ class TestTransactions(unittest.TestCase):
 
         result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
+        result_data.pop("transaction")
 
-        self.assertEqual(result_data["message"]["body"], "modified data")
+        self.assertDictEqual({"message": {"body": "modified data"}, "storage": storage, "output": {"transaction": "transactionkey_unique_storage_key"}}, result_data)
 
         expected_file_path = os.path.join(
             ".hypergo_storage", "transactions", "transactionkey_unique_storage_key"
@@ -948,7 +977,9 @@ class TestTransactions(unittest.TestCase):
         result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
-        self.assertEqual(result_data["message"]["body"], "modified data")
+        result_data.pop("transaction")
+
+        self.assertDictEqual({"message": {"body": "modified data"}, "storage": storage, "output": {"transaction": "transactionkey_txid"}}, result_data)
 
         expected_file_path = os.path.join(
             ".hypergo_storage", "transactions", "transactionkey_txid"
