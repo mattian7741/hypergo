@@ -33,8 +33,15 @@ def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def root_node(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
-    def wrapper(value: Any, key: Optional[str] = None, *args: Tuple[Any, ...]) -> Any:
-        return func({"__root__": value}, f"__root__.{key}" if key else "__root__", *args).get("__root__")
+    def wrapper(
+        value: Any, input_key: Optional[str] = None, output_key: Optional[str] = None, *args: Tuple[Any, ...]
+    ) -> Any:
+        return func(
+            {"__root__": value},
+            f"__root__.{input_key}" if input_key else "__root__",
+            f"__root__.{output_key}" if output_key else "__root__",
+            *args,
+        ).get("__root__")
 
     return wrapper
 
@@ -122,27 +129,26 @@ def deserialize(serialized: str, key: Optional[str] = None) -> Any:
 
 
 @root_node
-def compress(data: Any, key: Optional[str] = None) -> Any:
-    if not key:
+def compress(data: Any, input_key: Optional[str] = None, output_key: Optional[str] = None, *args) -> Any:
+    if not input_key:
         return base64.b64encode(lzma.compress(json.dumps(data).encode("utf-8"))).decode("utf-8")
 
-    deep_set(
+    return deep_set(
         data,
-        key,
-        base64.b64encode(lzma.compress(json.dumps(deep_get(data, key)).encode("utf-8"))).decode("utf-8"),
+        output_key,
+        base64.b64encode(lzma.compress(json.dumps(deep_get(data, input_key)).encode("utf-8"))).decode("utf-8"),
     )
-    return data
 
 
 @root_node
-def decompress(data: Any, key: Optional[str] = None) -> Any:
-    if not key:
+def decompress(data: Any, input_key: Optional[str] = None, output_key: Optional[str] = None, *args) -> Any:
+    if not input_key:
         return json.loads(lzma.decompress(base64.b64decode(data)).decode("utf-8"))
 
     deep_set(
         data,
-        key,
-        json.loads(lzma.decompress(base64.b64decode(deep_get(data, key))).decode("utf-8")),
+        output_key,
+        json.loads(lzma.decompress(base64.b64decode(deep_get(data, input_key))).decode("utf-8")),
     )
     return data
 

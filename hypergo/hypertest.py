@@ -300,6 +300,7 @@ class Executor:
             for result in results:
                 output_operations = _.deep_get(data, "config.output_operations.encryption", [])
                 for datum_to_encrypt in output_operations:
+                    result = _.deep_set(result)
                     result = _.encrypt(data, datum_to_encrypt, ENCRYPTIONKEY)
 
                 print(f"I'm in encryption {result}\n\n")
@@ -314,16 +315,14 @@ class Executor:
             print(f"I'm in compression. self: {self} data: {data}\n")
             input_operations = _.deep_get(data, "config.input_operations.compression", [])
             for datum_to_decompress in input_operations:
-                data = _.decompress(data, datum_to_decompress)
+                data = _.decompress(data, datum_to_decompress, datum_to_decompress)
 
             results = func(self, data, *args, *kwargs)
 
             for result in results:
                 output_operations = _.deep_get(data, "config.output_operations.compression", [])
                 for datum_to_compress in output_operations:
-                    result = _.compress(data, datum_to_compress)
-
-                print(f"I'm in compression {result}\n\n")
+                    result = _.compress(data, datum_to_compress, f"output.{datum_to_compress}")
                 yield result
 
         return wrapper

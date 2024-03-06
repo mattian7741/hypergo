@@ -1164,16 +1164,25 @@ class TestCompression(unittest.TestCase):
             result_generator = test_func(Mock(), data)
             result_data = next(result_generator)
 
-            self.assertEqual(
+            print(result_data)
+
+            self.assertDictEqual(
                 {
                     "message": {
                         "body": {
-                            "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAFImRhdGEiAAAAi9GTyyyJmsYAAR4GwS+kHR+2830BAAAAAARZWg=="
+                            "some": "data"
                         }
                     },
                     "config": {
                         "output_operations": {
                             "compression": ["message.body.some"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAFImRhdGEiAAAAi9GTyyyJmsYAAR4GwS+kHR+2830BAAAAAARZWg=="
+                            }
                         }
                     }
                 },
@@ -1211,12 +1220,14 @@ class TestCompression(unittest.TestCase):
         result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
 
-        self.assertEqual(
+        print(f"result data = {result_data}")
+
+        self.assertDictEqual(
                 {
                     "message": {
                         "body": {
-                            "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAOIm1vZGlmaWVkIGRhdGEiAAA5neHY2S7+AAABJw/fGvxqH7bzfQEAAAAABFla",
-                            "more": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAZIm1vcmUgbW9kaWZpZWQgb3RoZXIgZGF0YSIAAACGG9aNDEr3zQABMhogGJQwH7bzfQEAAAAABFla"
+                            "some": "modified data",
+                            "more": "more modified other data"
                         }
                     },
                     "config": {
@@ -1225,6 +1236,14 @@ class TestCompression(unittest.TestCase):
                         },
                         "output_operations": {
                             "compression": ["message.body.some", "message.body.more"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAOIm1vZGlmaWVkIGRhdGEiAAA5neHY2S7+AAABJw/fGvxqH7bzfQEAAAAABFla",
+                                "more": "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQAZIm1vcmUgbW9kaWZpZWQgb3RoZXIgZGF0YSIAAACGG9aNDEr3zQABMhogGJQwH7bzfQEAAAAABFla"
+                            }
                         }
                     }
                 },
