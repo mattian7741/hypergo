@@ -255,7 +255,7 @@ class Executor:
 
             for datum_to_fetch in input_operations:
                 data = Executor.fetchbyreference(
-                    data, datum_to_fetch, _.deep_get(data, "storage").use_sub_path("passbyreference/")
+                    data, datum_to_fetch, datum_to_fetch, _.deep_get(data, "storage").use_sub_path("passbyreference/")
                 )
 
             results = func(self, data, *args, *kwargs)
@@ -265,7 +265,7 @@ class Executor:
 
                 for datum_to_store in output_operations:
                     result = Executor.storebyreference(
-                        result, f"output.{datum_to_store}", _.deep_get(data, "storage").use_sub_path("passbyreference/")
+                        result, f"output.{datum_to_store}", f"output.{datum_to_store}", _.deep_get(data, "storage").use_sub_path("passbyreference/")
                     )
 
                 print(f"I'm in passbyreference {result}\n\n")
@@ -273,16 +273,17 @@ class Executor:
 
         return wrapper
 
+    @_.root_node
     @staticmethod
-    def storebyreference(data: Any, key: str, storage: Storage) -> Any:
+    def storebyreference(data: Any, input_key: str, output_key: str, storage: Storage) -> Any:
         out_storage_key = f"{_.unique_identifier('storagekey')}"
-        storage.save(out_storage_key, _.stringify(_.deep_get(data, key)))
-        return _.deep_set(data, key, out_storage_key)
+        storage.save(out_storage_key, _.stringify(_.deep_get(data, input_key)))
+        return _.deep_set(data, output_key, out_storage_key)
 
     @_.root_node
     @staticmethod
-    def fetchbyreference(data: Union[List[Any], Dict[str, Any]], key: str, storage: Storage) -> Any:
-        return _.deep_set(data, key, _.objectify(storage.load(_.deep_get(data, key))))
+    def fetchbyreference(data: Union[List[Any], Dict[str, Any]], input_key: str, output_key: str, storage: Storage) -> Any:
+        return _.deep_set(data, output_key, _.objectify(storage.load(_.deep_get(data, input_key))))
 
     @staticmethod
     def encryption(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., Generator[Any, None, None]]:
