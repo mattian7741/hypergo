@@ -1014,13 +1014,13 @@ class TestSerialization(unittest.TestCase):
 
             yield data
         
-        serialized = _.serialize(data, "message.body")
+        serialized = _.serialize(data, "message.body", "message.body")
 
         # Execute the decorated generator with compressed input data
         generator = test_func(Mock(), serialized)
         result_data = next(generator)
 
-        deserialized_result_data = _.deserialize(result_data, "message.body")
+        deserialized_result_data = _.deserialize(result_data, "message.body", "message.body")
 
         self.assertDictEqual(deserialized_result_data, {
             "message": {

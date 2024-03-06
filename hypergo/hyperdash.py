@@ -99,7 +99,7 @@ def objectify(stringified: str) -> Union[List[Any], Dict[str, Any]]:
 
 @root_node
 @traverse_datastructures
-def serialize(obj: Any, key: Optional[str] = None) -> Any:
+def serialize(obj: Any, input_key: Optional[str] = None, output_key: Optional[str] = None) -> Any:
     if type(obj) in [None, bool, int, float, str]:
         return cast(Union[None, bool, int, float, str], obj)
 
@@ -116,7 +116,7 @@ def serialize(obj: Any, key: Optional[str] = None) -> Any:
 
 @root_node
 @traverse_datastructures
-def deserialize(serialized: str, key: Optional[str] = None) -> Any:
+def deserialize(serialized: str, input_key: Optional[str] = None, output_key: Optional[str] = None) -> Any:
     if not serialized:
         return serialized
     try:
