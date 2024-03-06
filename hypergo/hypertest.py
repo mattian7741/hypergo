@@ -265,7 +265,10 @@ class Executor:
 
                 for datum_to_store in output_operations:
                     result = Executor.storebyreference(
-                        result, f"output.{datum_to_store}", f"output.{datum_to_store}", _.deep_get(data, "storage").use_sub_path("passbyreference/")
+                        result,
+                        f"output.{datum_to_store}",
+                        f"output.{datum_to_store}",
+                        _.deep_get(data, "storage").use_sub_path("passbyreference/"),
                     )
 
                 print(f"I'm in passbyreference {result}\n\n")
@@ -282,7 +285,9 @@ class Executor:
 
     @_.root_node
     @staticmethod
-    def fetchbyreference(data: Union[List[Any], Dict[str, Any]], input_key: str, output_key: str, storage: Storage) -> Any:
+    def fetchbyreference(
+        data: Union[List[Any], Dict[str, Any]], input_key: str, output_key: str, storage: Storage
+    ) -> Any:
         return _.deep_set(data, output_key, _.objectify(storage.load(_.deep_get(data, input_key))))
 
     @staticmethod
@@ -294,15 +299,16 @@ class Executor:
             print(f"I'm in encryption. data: {data}\n")
 
             for datum_to_decrypt in input_operations:
-                data = _.decrypt(data, datum_to_decrypt, ENCRYPTIONKEY)
+                data = _.decrypt(data, datum_to_decrypt, datum_to_decrypt, ENCRYPTIONKEY)
 
             results = func(self, data, *args, *kwargs)
 
             for result in results:
                 output_operations = _.deep_get(data, "config.output_operations.encryption", [])
                 for datum_to_encrypt in output_operations:
-                    result = _.deep_set(result)
-                    result = _.encrypt(data, datum_to_encrypt, ENCRYPTIONKEY)
+                    result = _.encrypt(
+                        result, f"output.{datum_to_encrypt}", f"output.{datum_to_encrypt}", ENCRYPTIONKEY
+                    )
 
                 print(f"I'm in encryption {result}\n\n")
                 yield result

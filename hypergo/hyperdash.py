@@ -154,23 +154,22 @@ def decompress(data: Any, input_key: Optional[str] = None, output_key: Optional[
 
 
 @root_node  # change encrypt to operate on a value and move the key handling out into a decorator
-def encrypt(data: Any, key: str, encryptkey: str) -> Any:
+def encrypt(data: Any, input_key: str, output_key: str, encryptkey: str) -> Any:
     key_bytes = encryptkey.encode("utf-8")
-    data_bytes = stringify(deep_get(data, key)).encode("utf-8")
+    data_bytes = stringify(deep_get(data, input_key)).encode("utf-8")
     encrypted_bytes = Fernet(key_bytes).encrypt(data_bytes)
     encrypted = encrypted_bytes.decode("utf-8")
-    deep_set(data, key, encrypted)
-    return data
+
+    return deep_set(data, output_key, encrypted)
 
 
 @root_node
-def decrypt(encrypted_data: Any, key: str, encryptkey: str) -> Any:
+def decrypt(encrypted_data: Any, input_key: str, output_key: str, encryptkey: str) -> Any:
     key_bytes = encryptkey.encode("utf-8")
-    encrypted_bytes = deep_get(encrypted_data, key).encode("utf-8")
+    encrypted_bytes = deep_get(encrypted_data, input_key).encode("utf-8")
     decrypted_bytes = Fernet(key_bytes).decrypt(encrypted_bytes)
     decrypted = decrypted_bytes.decode("utf-8")
-    deep_set(encrypted_data, key, objectify(decrypted))
-    return encrypted_data
+    return deep_set(encrypted_data, output_key, objectify(decrypted))
 
 
 def is_array(obj: Any) -> bool:

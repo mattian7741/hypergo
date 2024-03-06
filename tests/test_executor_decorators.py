@@ -655,10 +655,17 @@ class TestEncryption(unittest.TestCase):
                 yield {
                     "message": {
                         "body": {
-                            "some": f"modified {message_body_in_the_function}"
+                            "some": f"{message_body_in_the_function}"
                         }
                     },
-                    "config": {}
+                    "config": {},
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": f"modified {message_body_in_the_function}"
+                            }
+                        }
+                    }
                 }
 
             data = {
@@ -676,14 +683,21 @@ class TestEncryption(unittest.TestCase):
             mock_decrypt.assert_not_called()
             mock_encrypt.assert_not_called()
 
-            self.assertEqual(
+            self.assertDictEqual(
                 {
                     "message": {
                         "body": {
-                            "some": "modified data"
+                            "some": "data"
                         }
                     },
-                    "config": {}
+                    "config": {},
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "modified data"
+                            }
+                        }
+                    }
                 },
                 result_data,
             )
@@ -693,16 +707,22 @@ class TestEncryption(unittest.TestCase):
             @Executor.encryption
             def test_func(mock_executor, data):
                 message_body_in_the_function = data["message"]["body"]["some"]
-
                 yield {
                     "message": {
                         "body": {
-                            "some": f"modified {message_body_in_the_function}"
+                            "some": f"{message_body_in_the_function}"
                         }
                     },
                     "config": {
                         "input_operations": {
                             "encryption": ["message.body.some"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": f"modified {message_body_in_the_function}"
+                            }
                         }
                     }
                 }
@@ -729,12 +749,19 @@ class TestEncryption(unittest.TestCase):
                 {
                     "message": {
                         "body": {
-                            "some": "modified data"
+                            "some": "data"
                         }
                     },
                     "config": {
                         "input_operations": {
                             "encryption": ["message.body.some"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": f"modified data"
+                            }
                         }
                     }
                 },
@@ -742,21 +769,28 @@ class TestEncryption(unittest.TestCase):
             )
     
     @mock.patch("hypergo.hyperdash.decrypt")
-    @mock.patch("cryptography.fernet.Fernet.encrypt", return_value=b'data')
+    @mock.patch("cryptography.fernet.Fernet.encrypt", return_value=b'encrypted')
     def test_encrypt_no_decrypt(self, mock_fernet_encrypt, mock_decrypt):
             @Executor.encryption
             def test_func(mock_executor, data):
-                message_body_in_the_function = data["message"]["body"]["some"]
+                message_body_in_the_function = _.deep_get(data, "message.body.some")
 
                 yield {
                     "message": {
                         "body": {
-                            "some": f"modified {message_body_in_the_function}"
+                            "some": f"{message_body_in_the_function}"
                         }
                     },
                     "config": {
                         "output_operations": {
                             "encryption": ["message.body.some"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": f"modified {message_body_in_the_function}"
+                            }
                         }
                     }
                 }
@@ -779,32 +813,39 @@ class TestEncryption(unittest.TestCase):
 
             mock_decrypt.assert_not_called()
 
-            self.assertEqual(
+            self.assertDictEqual(
                 {
                     "message": {
                         "body": {
-                            "some": b'data'.decode("utf-8")
+                            "some": "data"
                         }
                     },
                     "config": {
                         "output_operations": {
                             "encryption": ["message.body.some"]
                         }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "encrypted"
+                            }
+                        }
                     }
                 },
                 result_data,
             )
 
-    @mock.patch("cryptography.fernet.Fernet.encrypt", return_value=b'data')
+    @mock.patch("cryptography.fernet.Fernet.encrypt", return_value=b'encrypted')
     def test_encrypt_decrypt(self, mock_fernet_encrypt):
         @Executor.encryption
         def test_func(mock_executor, data):
-            message_body_in_the_function = data["message"]["body"]["some"]
+            message_body_in_the_function = _.deep_get(data, "message.body.some")
 
             yield {
                 "message": {
                     "body": {
-                        "some": f"modified {message_body_in_the_function}"
+                        "some": f"{message_body_in_the_function}"
                     }
                 },
                 "config": {
@@ -813,6 +854,13 @@ class TestEncryption(unittest.TestCase):
                     },
                     "output_operations": {
                         "encryption": ["message.body.some"]
+                    }
+                },
+                "output": {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function}"
+                        }
                     }
                 }
             }
@@ -840,7 +888,7 @@ class TestEncryption(unittest.TestCase):
                 {
                     "message": {
                         "body": {
-                            "some": b'data'.decode("utf-8")
+                            "some": "data"
                         }
                     },
                     "config": {
@@ -850,6 +898,13 @@ class TestEncryption(unittest.TestCase):
                         "output_operations": {
                             "encryption": ["message.body.some"]
                         }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "encrypted"
+                            }
+                        }
                     }
                 },
                 result_data,
@@ -858,13 +913,33 @@ class TestEncryption(unittest.TestCase):
     def test_multiple_input_operations_and_multiple_output_operations(self):
         @Executor.encryption
         def test_func(mock_executor, data):
-            some_message_body_in_the_function = data["message"]["body"]["some"]
-            more_message_body_in_the_function = data["message"]["body"]["more"]
+            message_body_in_the_function_some = _.deep_get(data, "message.body.some")
+            message_body_in_the_function_more = _.deep_get(data, "message.body.more")
 
-            data["message"]["body"]["some"] = f"modified {some_message_body_in_the_function}"
-            data["message"]["body"]["more"] = f"more modified {more_message_body_in_the_function}"
-
-            yield data
+            yield {
+                "message": {
+                    "body": {
+                        "some": f"{message_body_in_the_function_some}",
+                        "more": f"{message_body_in_the_function_more}"
+                    }
+                },
+                "config": {
+                    "input_operations": {
+                        "encryption": ["message.body.some", "message.body.more"]
+                    },
+                    "output_operations": {
+                        "encryption": ["message.body.some", "message.body.more"]
+                    }
+                },
+                "output": {
+                    "message": {
+                        "body": {
+                            "some": f"modified {message_body_in_the_function_some}",
+                            "more": f"more modified {message_body_in_the_function_some}"
+                        }
+                    }
+                }
+            }
 
         data = {
                 "message": {
@@ -887,12 +962,12 @@ class TestEncryption(unittest.TestCase):
             result_generator = test_func(Mock(), data)
             result_data = next(result_generator)
 
-        self.assertEqual(
+        self.assertDictEqual(
                 {
                     "message": {
                         "body": {
-                            "some": b'output_encryption_some'.decode("utf-8"),
-                            "more": b'output_encryption_more'.decode("utf-8")
+                            "some": "data",
+                            "more": "other_data"
                         }
                     },
                     "config": {
@@ -901,6 +976,14 @@ class TestEncryption(unittest.TestCase):
                         },
                         "output_operations": {
                             "encryption": ["message.body.some", "message.body.more"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "output_encryption_some",
+                                "more": "output_encryption_more"
+                            }
                         }
                     }
                 },
