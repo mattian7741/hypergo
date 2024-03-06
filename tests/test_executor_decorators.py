@@ -547,11 +547,11 @@ class TestPassByReference(unittest.TestCase):
 
         @Executor.passbyreference
         def test_func(mock_executor, data):
-            some_message_body_in_the_function = data["message"]["body"]["some"]
-            more_message_body_in_the_function = data["message"]["body"]["more"]
+            some_message_body_in_the_function = _.deep_get(data, "message.body.some")
+            more_message_body_in_the_function = _.deep_get(data, "message.body.more")
 
-            data["message"]["body"]["some"] = f"modified {some_message_body_in_the_function}"
-            data["message"]["body"]["more"] = f"more modified {more_message_body_in_the_function}"
+            data = _.deep_set(data, "output.message.body.some", f"modified {some_message_body_in_the_function}")
+            data = _.deep_set(data, "output.message.body.more", f"more modified {more_message_body_in_the_function}")
 
             yield data
 
@@ -574,24 +574,24 @@ class TestPassByReference(unittest.TestCase):
         }
 
         with mock.patch.object(_, 'unique_identifier', side_effect=["input_storage_key_some", "input_storage_key_more"]):
-            Executor.storebyreference(
-                data, "message.body.some", storage.use_sub_path("passbyreference/")
+            data = Executor.storebyreference(
+                data, "message.body.some", "message.body.some", storage.use_sub_path("passbyreference/")
             )
 
-            Executor.storebyreference(
-                data, "message.body.more", storage.use_sub_path("passbyreference/")
+            data = Executor.storebyreference(
+                data, "message.body.more", "message.body.more", storage.use_sub_path("passbyreference/")
             )
         
         with mock.patch.object(_, 'unique_identifier', side_effect=["output_storage_key_some", "output_storage_key_more"]):
             result_generator = test_func(Mock(), data)
             result_data = next(result_generator)
 
-        self.assertEqual(
+        self.assertDictEqual(
                 {
                     "message": {
                         "body": {
-                            "some": "output_storage_key_some",
-                            "more": "output_storage_key_more"
+                            "some": "data",
+                            "more": "other data"
                         }
                     },
                     "storage": storage, 
@@ -601,6 +601,14 @@ class TestPassByReference(unittest.TestCase):
                         },
                         "output_operations": {
                             "passbyreference": ["message.body.some", "message.body.more"]
+                        }
+                    },
+                    "output": {
+                        "message": {
+                            "body": {
+                                "some": "output_storage_key_some",
+                                "more": "output_storage_key_more"
+                            }
                         }
                     }
                 },
