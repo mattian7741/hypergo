@@ -75,6 +75,8 @@ class TestExecute(unittest.TestCase):
         result_generator = executor.execute(message)
         result = next(result_generator)
 
+        print(result)
+
         self.assertDictEqual({"routingkey": "result.output.keys", "message": {"body": "data"}, "transaction": "transactionkey_unique_storage_key"}, result)
 
 

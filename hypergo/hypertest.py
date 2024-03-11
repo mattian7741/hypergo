@@ -62,37 +62,6 @@ def streaming(func: Callable[..., Generator[Any, None, None]]) -> Callable[..., 
 
     return wrapper
 
-
-##########################################################################
-
-
-def the_function(farfunc: Callable[[float, float], float], float1: float, float2: float, trans: Transaction) -> float:
-    count = trans.get("count", 1)
-    trans.set("count", count + 1)
-    print("this is where I fail")
-    result: float = farfunc(float1, float2) / count
-    return result
-
-
-# def the_function(arr: List[Any]) -> float:
-#     print("arr: ", arr)
-#     return 4321
-
-
-the_config: Dict[str, Any] = {
-    "lib_func": "hypergo.hypertest.the_function",
-    "input_keys": ["x.y.z", "v.u.w"],
-    "output_keys": ["m.n.?"],
-    "input_bindings": ["{config.custom_properties.?}", "{message.body.a.x}", "{message.body.a.y}", "{transaction}"],
-    # "input_bindings": ["{message.body}"],
-    "output_bindings": [{"message": {"body": {"p": {"q": {"r": "{output}"}}}}}],
-    "custom_properties": {"x": "{message.body.abc.fn}", "w": "{message.body.a.c}"},
-}
-
-# the_generator: Callable[..., Generator[Any, None, None]] = generatorize(the_function)
-the_storage: Storage = LocalStorage()
-the_context: Dict[str, Any] = {"config": the_config, "message": None, "output": None}
-
 ##########################################################################
 
 
@@ -120,10 +89,11 @@ def main() -> None:
         #     }
         # }]
     }
+    storage = LocalStorage()
     serialized_message = _.serialize(message, "body")
     compressed_message = _.compress(serialized_message, "body")
     encrypted_message = _.encrypt(compressed_message, "body", ENCRYPTIONKEY)
-    stored_message = Executor.storebyreference(encrypted_message, "body", the_storage.use_sub_path("passbyreference"))
+    stored_message = Executor.storebyreference(encrypted_message, "body", storage.use_sub_path("passbyreference"))
     import json  # pylint: disable=import-outside-toplevel
 
     config = ConfigType(
@@ -143,10 +113,10 @@ def main() -> None:
         }
     )
 
-    executor = Executor(config, the_storage)
+    executor = Executor(config, storage)
 
     for i in executor.execute(stored_message):
-        loaded_message = Executor.fetchbyreference(i, "body", the_storage.use_sub_path("passbyreference"))
+        loaded_message = Executor.fetchbyreference(i, "body", storage.use_sub_path("passbyreference"))
         unencrypted = _.decrypt(loaded_message, "body", ENCRYPTIONKEY)
         decompressed = _.decompress(unencrypted, "body")
         print(json.dumps(decompressed))
@@ -196,15 +166,15 @@ class Executor:
         def wrapper(self, message: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
             print(f"I'm in contextualize. self: {self} Data: {message}\n")
             # _.deep_set(the_context, "input", data)
-            yield from (
-                _.deep_get(result, "output")
-                for result in func(
-                    self,
-                    {"config": deepcopy(self.config), "message": message, "storage": self.storage, "output": {}},
-                    *args,
-                    **kwargs,
-                )
-            )
+
+            for result in func(
+                self,
+                {"config": deepcopy(self.config), "message": message, "storage": self.storage, "output": {}},
+                *args,
+                **kwargs,
+            ):
+                print(f"im in contextualize result {result}")
+            yield result
 
         return wrapper
 
@@ -229,6 +199,8 @@ class Executor:
 
             if result != string:
                 result = substitute(result, data)
+
+            print(f"handle substitutions: {result}")
             return result
 
         return substitute(value, data)
@@ -238,10 +210,9 @@ class Executor:
         @wraps(func)
         def wrapper(self, data: Any, *args: Any, **kwargs: Any) -> Generator[Any, None, None]:
             print(f"I'm in substitutions. self: {self} data: {data}\n")
-            results = func(self, Executor._handle_substitution(data, data), *args, **kwargs)
-            for result in results:
-                print(f"I'm in substitutions {result}\n\n")
-                yield Executor._handle_substitution(result, result)
+            for result in func(self, Executor._handle_substitution(data, data), *args, **kwargs):
+                print(f"in substitutions result: {result}")
+                yield result
 
         return wrapper
 

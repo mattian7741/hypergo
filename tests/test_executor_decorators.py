@@ -314,6 +314,7 @@ class TestExceptions(unittest.TestCase):
 
 
 class TestPassByReference(unittest.TestCase):
+    # TODO: Update these to have more realistic output from the test_func
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_cwd = os.getcwd()
@@ -992,6 +993,7 @@ class TestEncryption(unittest.TestCase):
 
 
 class TestTransactions(unittest.TestCase):
+    # TODO: Update this to have more realistic output from test_func
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_cwd = os.getcwd()
@@ -1088,6 +1090,7 @@ class TestTransactions(unittest.TestCase):
             )
 
 class TestSerialization(unittest.TestCase):
+    # TODO: Update this to have more realistic output from test_func
     def test_serialization(self):
         storage = LocalStorage()
 
@@ -1135,6 +1138,7 @@ class TestStreaming(unittest.TestCase):
         pass
 
 class TestCompression(unittest.TestCase):
+    # TODO: Fix these to have more realistic returns from the test_func
     def test_no_decompress_no_compress(self):
         @Executor.compression
         def test_func(mock_executor, data):
