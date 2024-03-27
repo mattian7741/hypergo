@@ -1,12 +1,10 @@
-# import json
-
-import datetime
 import inspect
 import json
 import logging
-from typing import Any, Dict  # , Tuple, Union
+from functools import wraps
+from typing import Any, Callable, Dict
 
-from hypergo.utility import Utility
+from hypergo.loggers.base_logger import BaseLogger as Logger
 
 CALLER_DEPTH: int = 10
 
@@ -16,52 +14,47 @@ class JSONFormatter(logging.Formatter):
         stack_item = inspect.stack()[CALLER_DEPTH]
         log_data: Dict[str, Any] = {
             "timestamp": self.formatTime(record),
-            "name": f"{stack_item.filename}:{stack_item.lineno} {stack_item.function}",
+            "name": f"""{stack_item.filename}:{stack_item.lineno} {stack_item.function}""",
             "level": record.levelname,
             "message": record.msg,
         }
         return json.dumps(log_data)
 
 
-def get_logger() -> logging.Logger:
-    logger = logging.getLogger("hypergo")
-    logger.setLevel(logging.DEBUG)
-
-    # console_handler = logging.StreamHandler()
-    # console_handler.setFormatter(JSONFormatter())
-    # logger.addHandler(console_handler)
-
-    file_handler = logging.FileHandler(
-        Utility.create_folders_for_file(
-            f"./.hypergo_storage/logs/app_{datetime.datetime.now().strftime('%Y-%m-%d')}.log"
-        )
-    )
-    file_handler.setFormatter(JSONFormatter())
-    logger.addHandler(file_handler)
-
-    return logger
+logger: Logger = Logger(name="hypergo", log_level=logging.DEBUG, log_format=JSONFormatter())
 
 
-my_logger = get_logger()
+def function_log(func: Callable[..., Any]) -> Callable[..., Any]:
+    @wraps(func)
+    def wrapper(self: Any, data: Any) -> Any:
+        function_logger: Logger = self.logger
+        function_logger.name = self.callback.__name__
+        function_logger.format = JSONFormatter()
+        try:
+            function_logger.info(f"Invoking function: {function_logger.name}")
+            # if func is an instance method of self then func(data) is called.
+            # Else it's a decorated function
+            result: Any = func(data) if inspect.ismethod(func) and self == func.__self__ else func(self, data)
+            return result
+        except Exception as e:
+            function_logger.error(f"""Function {function_logger.name} encountered error: {str(e)}""")
+            raise e
+
+    return wrapper
 
 
-class Logger:
-    @staticmethod
-    def warning(*args: Any, **kwargs: Any) -> None:
-        my_logger.warning(args)
+def sdk_log(func: Callable[..., Any]) -> Callable[..., Any]:
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        name: str = f"hypergo.{func.__name__}"
+        sdk_logger: Logger = Logger(name=name, log_level=logging.DEBUG, log_format=JSONFormatter())
+        try:
+            sdk_logger.info(f"Invoking function: {name}")
+            result: Any = func(*args, **kwargs)
+            sdk_logger.info(f"Function {name} completed successfully")
+            return result
+        except Exception as e:
+            sdk_logger.error(f"""Function {name} encountered error: {str(e)}""")
+            raise e
 
-    @staticmethod
-    def debug(*args: Any, **kwargs: Any) -> None:
-        my_logger.debug(args)
-
-    @staticmethod
-    def info(*args: Any, **kwargs: Any) -> None:
-        my_logger.info(args)
-
-    @staticmethod
-    def error(*args: Any, **kwargs: Any) -> None:
-        my_logger.error(args)
-
-    @staticmethod
-    def critical(*args: Any, **kwargs: Any) -> None:
-        my_logger.critical(args)
+    return wrapper

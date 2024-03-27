@@ -32,6 +32,7 @@ class Node(ABC):
 
 
 nodes: List[Node] = []
+inoutkeys: List[str] = []
 
 
 class Component(Node):
@@ -59,7 +60,12 @@ class Component(Node):
 
 class Edge(Node):
     def attr(self) -> Dict[str, Any]:
-        return {"fontcolor": "#88A8D8", "fixedsize": "false", "shape": "none", "label": str(self)}
+        return {
+            "fontcolor": "#88A8D8",
+            "fixedsize": "false",
+            "shape": "none",
+            "label": str(self),
+        }
 
 
 def add_configs(configs: List[Dict[str, Any]], folder: str) -> None:
@@ -103,13 +109,25 @@ def build_graph(out_edge: Edge, cfg: Dict[str, Any], cfgs: List[Dict[str, Any]])
             in_edge.add_node(component)
 
             for output_key in get_key("output_keys"):
+                inoutkey = f"{input_key}_{output_key}"
+                if inoutkey in inoutkeys:
+                    break
+                inoutkeys.append(inoutkey)
                 do_substitution(input_key, output_key, out_key, cfgs, component)
 
 
 def do_substitution(
-    input_key: str, output_key: str, routingkey: str, cfgs: List[Dict[str, Any]], component: Component
+    input_key: str,
+    output_key: str,
+    routingkey: str,
+    cfgs: List[Dict[str, Any]],
+    component: Component,
 ) -> None:
-    derived_key = re.sub(r"\?", ".".join(set(routingkey.split(".")) - set(input_key.split("."))), output_key)
+    derived_key = re.sub(
+        r"\?",
+        ".".join(set(routingkey.split(".")) - set(input_key.split("."))),
+        output_key,
+    )
     outbound = Edge(derived_key)
 
     for config in cfgs:
@@ -127,7 +145,7 @@ def graph(rks: List[str], folders: List[str]) -> None:
     do_graph(rks, folders)
 
     dot = graphviz.Digraph(comment="Component Diagram")
-    dot.attr("graph", bgcolor="#0071BD", nodesep="2", pad="1", rankdir="TB")
+    dot.attr("graph", bgcolor="#0071BD", nodesep="5", pad="1", rankdir="TB")
     dot.attr("edge", color="#ffffff80")
     dot.attr("node", fontcolor="#ffffff", fontname="courier", fontsize="30")
 

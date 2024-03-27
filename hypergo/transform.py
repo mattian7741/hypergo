@@ -1,3 +1,4 @@
+import os
 from functools import wraps
 from typing import Any, Callable, Dict, Generator, List, Tuple, TypeVar, cast
 
@@ -35,23 +36,35 @@ class Transform:
     def operation(op_name: str) -> Callable[..., Any]:
         def decorator(func: Callable[..., Generator[T, None, None]]) -> Callable[..., Generator[T, None, None]]:
             @wraps(func)
-            # type: ignore
-            def wrapper(self, data: Any) -> Generator[T, None, None]:
+            # mypy: allow-untyped-defs
+            def wrapper(self: Any, data: Any) -> Generator[T, None, None]:
                 args: List[List[Any]] = {
                     "compression": [[Utility.uncompress], [Utility.compress]],
-                    "serialization": [[Utility.deserialize], [Utility.serialize]],
+                    "serialization": [
+                        [Utility.deserialize],
+                        [Utility.serialize],
+                    ],
                     "pass_by_reference": [
                         [Transform.fetchbyreference, self.storage],
                         [Transform.storebyreference, self.storage],
                     ],
-                    "encryption": [[Utility.decrypt, ENCRYPTIONKEY], [Utility.encrypt, ENCRYPTIONKEY]],
+                    "encryption": [
+                        [Utility.decrypt, ENCRYPTIONKEY],
+                        [Utility.encrypt, ENCRYPTIONKEY],
+                    ],
                     "contextualization": [
                         [Transform.add_context, self.storage, self.config],
                         [Transform.remove_context],
                     ],
                     "transaction": [
-                        [Transform.restore_transaction, self.storage.use_sub_path("transactions")],
-                        [Transform.stash_transaction, self.storage.use_sub_path("transactions")],
+                        [
+                            Transform.restore_transaction,
+                            self.storage.use_sub_path("transactions"),
+                        ],
+                        [
+                            Transform.stash_transaction,
+                            self.storage.use_sub_path("transactions"),
+                        ],
                     ],
                 }[op_name]
                 input_operations = Utility.deep_get(self.config, "input_operations", {})
@@ -95,24 +108,34 @@ class Transform:
             txid = f"transactionkey_{transaction.txid}"
         else:
             transaction = Transaction.from_str(storage.load(txid))
-        Utility.deep_set(data, "__txid__", txid)
+        # Utility.deep_set(data, "__txid__", txid)
         Utility.deep_set(data, "transaction", transaction)
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
-        txid = f"{Utility.deep_get(data, '__txid__')}"
+        # txid = f"{Utility.deep_get(data, '__txid__')}"
+        txid = f"transactionkey_{Utility.deep_get(data, 'transaction').txid}"
         storage.save(txid, str(Utility.deep_get(data, "transaction")))
         Utility.deep_set(data, "transaction", txid)
-        Utility.deep_del(data, "__txid__")
+        # Utility.deep_del(data, "__txid__")
         return data
 
     @staticmethod
-    def add_context(input_message: Any, key: str, base_storage: Storage, config: Dict[str, Any]) -> Any:
-        context: Dict[str, Any] = {"message": input_message, "config": config}
+    def add_context(
+        input_message: Any,
+        key: str,
+        base_storage: Storage,
+        config: Dict[str, Any],
+    ) -> Any:
+        context: Dict[str, Any] = {
+            "message": input_message,
+            "config": config,
+            "transaction": input_message["transaction"],
+        }
         if base_storage:
             context["storage"] = base_storage.use_sub_path(
-                f"component/private/{Utility.deep_get(context, 'config.name')}"
+                os.path.join("component", "private", Utility.deep_get(context, "config.name"))
             )
         return context
 
@@ -124,7 +147,7 @@ class Transform:
     @root_node
     @config_v0_v1_passbyreference_backward_compatible
     def storebyreference(data: Any, key: str, base_storage: Storage) -> Any:
-        storage: Storage = base_storage.use_sub_path("passbyreference/")
+        storage: Storage = base_storage.use_sub_path("passbyreference")
         str_result = Utility.stringify(Utility.deep_get(data, key))
         out_storage_key = f"storagekey_{Utility.hash(str_result)}"
         storage.save(out_storage_key, str_result)
@@ -135,7 +158,7 @@ class Transform:
     @root_node
     @config_v0_v1_passbyreference_backward_compatible
     def fetchbyreference(data: Any, key: str, base_storage: Storage) -> Any:
-        storage = base_storage.use_sub_path("passbyreference/")
+        storage = base_storage.use_sub_path("passbyreference")
         storage_key = Utility.deep_get(cast(JsonDict, data), key)
         loaded = storage.load(storage_key)
         the_data = Utility.objectify(loaded)

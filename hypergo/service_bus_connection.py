@@ -1,18 +1,18 @@
-from abc import ABC, abstractmethod
-from typing import Union, cast
+from abc import abstractmethod
+from typing import Any
 
-from hypergo.config import ConfigType
-from hypergo.executor import Executor
+from hypergo.connection import Connection
 from hypergo.message import MessageType
-from hypergo.storage import Storage
 
 
-class ServiceBusConnection(ABC):
-    def general_consume(self, message: MessageType, config: ConfigType, storage: Union[Storage, None]) -> None:
-        executor: Executor = Executor(config, storage)
-        for execution in executor.execute(message):
-            self.send(cast(MessageType, execution), config["namespace"])
+class ServiceBusConnection(Connection):
+    def general_consume(
+        self,
+        message: MessageType,
+        **kwargs: Any,
+    ) -> None:
+        super().general_consume(message=message, **kwargs)
 
     @abstractmethod
     def send(self, message: MessageType, namespace: str) -> None:
-        ...
+        super().send(message=message, namespace=namespace)

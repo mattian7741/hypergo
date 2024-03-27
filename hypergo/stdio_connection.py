@@ -1,10 +1,8 @@
 import json
-from typing import List, Union
+from typing import Any, List
 
-from hypergo.config import ConfigType
 from hypergo.connection import Connection
 from hypergo.message import Message, MessageType
-from hypergo.storage import Storage
 from hypergo.utility import Utility
 
 
@@ -23,13 +21,13 @@ class StdioConnection(Connection):
     def send(self, message: MessageType, namespace: str) -> None:
         print(json.dumps(message))
 
-    def consume(self, stdio_message: str, config: ConfigType, storage: Union[Storage, None]) -> None:
+    def consume(self, stdio_message: str, **kwargs: Any) -> None:
         message: MessageType = Message.from_stdio_message(stdio_message)
         routingkey = Utility.deep_get(message, "routingkey")
-        input_keys = Utility.deep_get(config, "input_keys")
+        input_keys = Utility.deep_get(kwargs["config"], "input_keys")
 
         for key in input_keys:
             if set(key.split(".")).issubset(set(routingkey.split("."))):
-                return self.general_consume(message, config, storage)
+                return self.general_consume(message, **kwargs)
 
         raise RoutingKeyMismatchError(routingkey, input_keys)

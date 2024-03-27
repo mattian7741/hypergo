@@ -8,6 +8,8 @@ from colors import color
 from hypergo.config import Config, ConfigType
 from hypergo.graph import graph as hypergraph
 from hypergo.local_storage import LocalStorage
+from hypergo.logger import logger
+from hypergo.secrets import LocalSecrets
 from hypergo.stdio_connection import StdioConnection
 from hypergo.version import get_version
 
@@ -42,7 +44,7 @@ class HypergoCli:
                 raise BrokenPipeError("No input message piped in through stdin")
 
             connection = StdioConnection()
-            connection.consume(args[0], config, LocalStorage())
+            connection.consume(args[0], config=config, storage=LocalStorage(), secrets=LocalSecrets(), logger=logger)
 
         except Exception as err:
             print(f"*** {err}")

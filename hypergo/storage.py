@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 
 
@@ -20,7 +21,7 @@ class SubStorage(Storage):
         self._sub_path: str = sub_path
 
     def load(self, file_name: str) -> str:
-        return self._base_storage.load(f"{self._sub_path}/{file_name}")
+        return self._base_storage.load(os.path.join(self._sub_path, file_name))
 
     def save(self, file_name: str, content: str) -> None:
-        return self._base_storage.save(f"{self._sub_path}/{file_name}", content)
+        return self._base_storage.save(os.path.join(self._sub_path, file_name), content)

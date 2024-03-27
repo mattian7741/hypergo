@@ -1,12 +1,12 @@
 import json
 import re
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, Union, cast
 
 import yaml
 from typing_extensions import NotRequired
 
 from hypergo.custom_types import JsonDict, TypedDictType
-from hypergo.logger import Logger
+from hypergo.logger import logger
 from hypergo.mapping import Mapping
 from hypergo.utility import Utility
 
@@ -32,7 +32,7 @@ class Config:
             cfg_dict: JsonDict = yaml.safe_load(file_handle)
             cfg: ConfigType = Config.convert(cfg_dict)
             if cfg != cfg_dict:
-                Logger.warning(f"Mapping version deprecated; use:\n{cfg}")
+                logger.warning(f"Mapping version deprecated; use:\n{cfg}")
             return cfg
 
     @staticmethod
@@ -41,12 +41,12 @@ class Config:
             cfg_dict: JsonDict = json.load(file_handle)
             cfg: ConfigType = Config.convert(cfg_dict)
             if cfg != cfg_dict:
-                Logger.warning(f"Mapping version deprecated; use:\n{cfg}")
+                logger.warning(f"Mapping version deprecated; use:\n{cfg}")
             return cfg
 
     @staticmethod
     def convert(cfg_dict: JsonDict) -> ConfigType:
-        mapping = {
+        mapping_dict: Dict[str, Mapping] = {
             "0.X.X": Mapping(
                 {
                     "version": "1.0.0",
@@ -57,9 +57,15 @@ class Config:
                     "input_keys": lambda source: source("input_keys"),
                     "output_keys": lambda source: source("output_keys"),
                     "input_bindings": lambda source: [
-                        field
-                        if isinstance(field, int)
-                        else re.sub(r"^'(.+)'$", "\\1", re.sub(r"^([^'].+[^'])$", "{\\1}", field))
+                        (
+                            field
+                            if not isinstance(field, str)
+                            else re.sub(
+                                r"^'(.+)'$",
+                                "\\1",
+                                re.sub(r"^([^'].+[^'])$", "{\\1}", field),
+                            )
+                        )
                         for field in source("input_bindings")
                     ],
                     "output_bindings": lambda source: source("output_bindings"),
@@ -79,33 +85,20 @@ class Config:
                     "output_keys": lambda source: source("output_keys"),
                     "input_bindings": lambda source: source("input_bindings"),
                     "output_bindings": lambda source: source("output_bindings"),
-                    "input_operations": lambda source: {
-                        op: {"compression": ["body"]}.get(op, []) for op in source("input_operations")
-                    },
-                    "output_operations": lambda source: {
-                        op: {"compression": ["body"]}.get(op, []) for op in source("output_operations")
-                    },
-                    "custom_properties": lambda source: source("custom_properties"),
+                    "input_operations": lambda source: {op: ["body"] for op in source("input_operations")},
+                    "output_operations": lambda source: {op: ["body"] for op in source("output_operations")},
+                    "custom_properties": lambda source: source("custom_properties", {}),
                 }
             ),
-            # TODO: use this commented block to identify v3 components and use that to redirect execution to the new executor
-            # "2.X.X": Mapping(
-            #     {
-            #         "version": "3.0.0",
-            #         "name": lambda source: source("name"),
-            #         "namespace": lambda source: source("namespace"),
-            #         "package": lambda source: source("package"),
-            #         "lib_func": lambda source: source("lib_func"),
-            #         "input_keys": lambda source: source("input_keys"),
-            #         "output_keys": lambda source: source("output_keys"),
-            #         "input_bindings": lambda source: source("input_bindings"),
-            #         "output_bindings": lambda source: source("output_bindings"),
-            #         "input_operations": lambda source: source("input_operations"),
-            #         "output_operations": lambda source: source("output_operations"),
-            #         "custom_properties": lambda source: source("custom_properties"),
-            #     }
-            # ),
-        }.get(re.sub(r"(\d)\.\d\.\d", "\\1.X.X", Utility.deep_get(cfg_dict, "version", "0.0.0")))
+        }
+
+        mapping: Union[Mapping, None] = mapping_dict.get(
+            re.sub(
+                r"(\d)\.\d\.\d",
+                "\\1.X.X",
+                Utility.deep_get(cfg_dict, "version", "0.0.0"),
+            )
+        )
 
         if not mapping:
             return cast(ConfigType, cfg_dict)

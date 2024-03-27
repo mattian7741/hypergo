@@ -1,3 +1,4 @@
+import os
 from functools import wraps
 from typing import Any, Callable, TypeVar
 
@@ -9,8 +10,8 @@ T = TypeVar("T")
 
 def addsubfolder(func: Callable[..., T]) -> Callable[..., T]:
     @wraps(func)
-    def wrapper(self: Any, file_name: str, *args: Any) -> T:
-        return func(self, f".hypergo_storage/{file_name}", *args)
+    def wrapper(self: Any, file_name: str, *args: Any) -> Any:
+        return func(self, os.path.join(os.path.expanduser("~"), ".hypergo_storage", file_name), *args)
 
     return wrapper
 

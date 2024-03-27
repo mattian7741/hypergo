@@ -8,6 +8,8 @@ import os
 import uuid
 from datetime import datetime
 from functools import wraps
+from importlib import import_module
+from types import ModuleType
 from typing import (Any, Callable, Dict, Mapping, Optional, Tuple, Union, cast,
                     get_origin)
 
@@ -36,7 +38,11 @@ def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
 def root_node(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
     def wrapper(value: Any, key: str, *args: Tuple[Any, ...]) -> Any:
-        return func({"__root__": value}, f"__root__.{key}" if key else "__root__", *args).get("__root__")
+        return func(
+            {"__root__": value},
+            f"__root__.{key}" if key else "__root__",
+            *args,
+        ).get("__root__")
 
     return wrapper
 
@@ -73,7 +79,11 @@ class Utility:  # pylint: disable=too-many-public-methods
         return pydash.has(dic, key)
 
     @staticmethod
-    def deep_get(dic: Union[TypedDictType, Dict[str, Any]], key: str, default_sentinel: Optional[Any] = object) -> Any:
+    def deep_get(
+        dic: Union[TypedDictType, Dict[str, Any]],
+        key: str,
+        default_sentinel: Optional[Any] = object,
+    ) -> Any:
         if not pydash.has(dic, key) and default_sentinel == object:
             raise KeyError(f"Spec \"{key}\" not found in the dictionary {json.dumps(Utility.serialize(dic, None))}")
         return pydash.get(dic, key, default_sentinel)
@@ -171,7 +181,12 @@ class Utility:  # pylint: disable=too-many-public-methods
             decoded: bytes = base64.b64decode(utfencoded)
             deserialized: Any = dill.loads(decoded)
             return deserialized
-        except (binascii.Error, dill.UnpicklingError, AttributeError, MemoryError):
+        except (
+            binascii.Error,
+            dill.UnpicklingError,
+            AttributeError,
+            MemoryError,
+        ):
             return serialized
 
     @staticmethod
@@ -229,3 +244,19 @@ class Utility:  # pylint: disable=too-many-public-methods
             raise ValueError("Failed to generate a valid Fernet key.")
         url_safe_key = base64.urlsafe_b64encode(key)
         return url_safe_key
+
+
+class DynamicImports:
+    def __init__(self, path: str, package_prefix: str):
+        self.path = path
+        self.package_prefix = package_prefix
+
+    @staticmethod
+    def dynamic_imp_module(package: str, module_name: str) -> ModuleType:
+        name = package + "." + module_name
+        return import_module(name=name)
+
+    @staticmethod
+    def dynamic_imp_class(package: str, module_name: str, class_name: str) -> Any:
+        module = DynamicImports.dynamic_imp_module(package=package, module_name=module_name)
+        return getattr(module, class_name)

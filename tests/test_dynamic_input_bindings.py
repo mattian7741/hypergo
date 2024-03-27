@@ -12,25 +12,25 @@ from hypergo.context import ContextType
 from hypergo.executor import Executor
 
 
-class TestDynamicRoutingKey(unittest.TestCase):
+class TestDynamicInputBindings(unittest.TestCase):
     def setUp(self) -> None:
         self.message: MessageType = {
-        "body": {},
-        "routingkey": "link.db.query.specleasing.scheduled.select_query"
+            "body": {},
+            "routingkey": "link.db.query.specleasing.scheduled.select_query"
         }
         return super().setUp()
-    
-    def test_dynamic_routing_key(self):
+
+    def test_dynamic_input_bindings(self):
         cfg: ConfigType = {
                             "namespace": "datalink",
                             "name": "snowflakedbexecutor",
                             "package": "ldp-db-executor",
-                            "lib_func": "dbexecutor_appliance.snowflake_db_executor_appliance.__main__.execute",
+                            "lib_func": "dbexecutor.snowflake_db_executor.__main__.execute",
                             "input_keys": ["link.db.query"],
                             "output_keys": ["?.db.result.link.json"],
-                            "input_bindings": ["config.custom_properties.?"],
+                            "input_bindings": ["{config.custom_properties.?}"],
                             "output_bindings": ["message.body.snowflake.db.record"],
-                            "custom_properties":{"specleasing.select_query": 
+                            "custom_properties": {"specleasing.select_query":
                                             "SELECT * FROM DP_LNK_DEV_DB.DP_LNK_ENTITIES.VW_UNIT_VALUATIONS LIMIT 10;"}
                         }
         executor = Executor(cfg)
@@ -39,6 +39,7 @@ class TestDynamicRoutingKey(unittest.TestCase):
             executor.get_args(context=context)
         except glom.PathAccessError as e:
             raise e
+
 
 if __name__ == '__main__':
     unittest.main()
