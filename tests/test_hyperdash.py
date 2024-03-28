@@ -312,7 +312,7 @@ class TestCompress(unittest.TestCase):
         )
 
     def test_compress_with_key(self):
-        result = _.compress({"abc": {"def": {"ghi": 1}, "jkl": 2}}, "abc.def")
+        result = _.compress({"abc": {"def": {"ghi": 1}, "jkl": 2}}, "abc.def", "abc.def")
 
         self.assertEqual(
             result,
@@ -325,15 +325,15 @@ class TestCompress(unittest.TestCase):
         )
 
 
-class TestUncompress(unittest.TestCase):
-    def test_uncompress_no_key(self):
+class TestDecompress(unittest.TestCase):
+    def test_decompress_no_key(self):
         result = _.decompress(
             "/Td6WFoAAATm1rRGAgAhARYAAAB0L+WjAQANeyJhYmMiOiAiZGVmIn0AAABJEUiEEamvOAABJg4IG+AEH7bzfQEAAAAABFla"
         )
 
         self.assertEqual(result, {"abc": "def"})
 
-    def test_uncompress_with_key(self):
+    def test_decompress_with_key(self):
         result = _.decompress(
             {
                 "abc": {
@@ -342,6 +342,7 @@ class TestUncompress(unittest.TestCase):
                 }
             },
             "abc.def",
+            "abc.def"
         )
 
         self.assertEqual(result, {"abc": {"def": {"ghi": 1}, "jkl": 2}})
