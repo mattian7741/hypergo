@@ -319,6 +319,7 @@ class TestPassByReference(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_cwd = os.getcwd()
         os.chdir(self.temp_dir.name)
+        self.storage = LocalStorage(self.temp_dir.name)
 
     def tearDown(self):
         os.chdir(self.original_cwd)
@@ -327,8 +328,6 @@ class TestPassByReference(unittest.TestCase):
     @mock.patch("hypergo.local_storage.LocalStorage.load")
     @mock.patch("hypergo.local_storage.LocalStorage.save")
     def test_no_input_operations_no_output_operations(self, mock_save, mock_load):
-        storage = LocalStorage()
-
         @Executor.passbyreference
         def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]["some"]
@@ -337,7 +336,7 @@ class TestPassByReference(unittest.TestCase):
 
             yield data
 
-        data = {"message": {"body": {"some": "data"}}, "storage": storage, 
+        data = {"message": {"body": {"some": "data"}}, "storage": self.storage, 
                     "config": {}}
 
         result_generator = test_func(Mock(), data)
@@ -353,7 +352,7 @@ class TestPassByReference(unittest.TestCase):
                         "some": "modified data"
                     }
                 },
-                "storage": storage,
+                "storage": self.storage,
                 "config": {}
             },
             result_data,
@@ -361,8 +360,6 @@ class TestPassByReference(unittest.TestCase):
 
     @mock.patch("hypergo.hyperdash.unique_identifier", return_value="unique_storage_key")
     def test_input_operations_no_output_operations(self, mock_unique_identifier):
-        storage = LocalStorage()
-
         @Executor.passbyreference
         def test_func(mock_executor, data):
 
@@ -371,11 +368,11 @@ class TestPassByReference(unittest.TestCase):
             data["output"] = {"message": {"body": {f"modified {message_body_in_the_function}"}}}
             yield data
 
-        data = {"message": {"body": {"some": "unique_storage_key"}}, "storage": storage,
+        data = {"message": {"body": {"some": "unique_storage_key"}}, "storage": self.storage,
                     "config": {"input_operations": {"passbyreference": ["message.body.some"]}}}
 
         out_storage_key = f"{_.unique_identifier('storagekey')}"
-        storage.use_sub_path("passbyreference/").save(out_storage_key, '"data"')
+        self.storage.use_sub_path("passbyreference/").save(out_storage_key, '"data"')
         
         with mock.patch.object(Executor, 'storebyreference') as mock_store_by_reference:
             result_generator = test_func(Mock(), data)
@@ -390,7 +387,7 @@ class TestPassByReference(unittest.TestCase):
                             "some": "data"
                         }
                     },
-                    "storage": storage,
+                    "storage": self.storage,
                     "config": {"input_operations": {"passbyreference": ["message.body.some"]}},
                     "output": {"message": {"body": {f"modified data"}}}
                 },
@@ -399,8 +396,6 @@ class TestPassByReference(unittest.TestCase):
 
     @mock.patch("hypergo.hyperdash.unique_identifier", return_value="unique_storage_key")
     def test_output_operations_no_input_operations(self, mock_unique_identifier):
-        storage = LocalStorage()
-
         @Executor.passbyreference
         def test_func(mock_executor, data):
 
@@ -415,7 +410,7 @@ class TestPassByReference(unittest.TestCase):
                     "some": "data"
                 }
             },
-            "storage": storage,
+            "storage": self.storage,
             "config": {
                 "output_operations": {"passbyreference": ["message.body.some"]}
             }
@@ -434,7 +429,7 @@ class TestPassByReference(unittest.TestCase):
                             "some": "data"
                         }
                     },
-                    "storage": storage, 
+                    "storage": self.storage, 
                     "config": {
                         "output_operations": {
                             "passbyreference": ["message.body.some"]
@@ -467,8 +462,6 @@ class TestPassByReference(unittest.TestCase):
 
 
     def test_input_operations_and_output_operations(self):
-        storage = LocalStorage()
-
         @Executor.passbyreference
         def test_func(mock_executor, data):
 
@@ -483,7 +476,7 @@ class TestPassByReference(unittest.TestCase):
                     "some": "input_storage_key"
                 }
             },
-            "storage": storage, 
+            "storage": self.storage, 
             "config": {
                 "input_operations": {
                     "passbyreference": ["message.body.some"]
@@ -496,7 +489,7 @@ class TestPassByReference(unittest.TestCase):
 
         with mock.patch.object(_, 'unique_identifier', return_value="input_storage_key"):
             out_storage_key = f"{_.unique_identifier('storagekey')}"
-            storage.use_sub_path("passbyreference/").save(out_storage_key, '"data"')
+            self.storage.use_sub_path("passbyreference/").save(out_storage_key, '"data"')
         
         with mock.patch.object(_, 'unique_identifier', return_value="output_storage_key"):
             result_generator = test_func(Mock(), data)
@@ -509,7 +502,7 @@ class TestPassByReference(unittest.TestCase):
                             "some": "data"
                         }
                     },
-                    "storage": storage, 
+                    "storage": self.storage, 
                     "config": {
                         "input_operations": {
                             "passbyreference": ["message.body.some"]
@@ -544,8 +537,6 @@ class TestPassByReference(unittest.TestCase):
             )
 
     def test_multiple_input_operations_and_multiple_output_operations(self):
-        storage = LocalStorage()
-
         @Executor.passbyreference
         def test_func(mock_executor, data):
             some_message_body_in_the_function = _.deep_get(data, "message.body.some")
@@ -563,7 +554,7 @@ class TestPassByReference(unittest.TestCase):
                     "more": "other data"
                 }
             },
-            "storage": storage, 
+            "storage": self.storage, 
             "config": {
                 "input_operations": {
                     "passbyreference": ["message.body.some", "message.body.more"]
@@ -576,11 +567,11 @@ class TestPassByReference(unittest.TestCase):
 
         with mock.patch.object(_, 'unique_identifier', side_effect=["input_storage_key_some", "input_storage_key_more"]):
             data = Executor.storebyreference(
-                data, "message.body.some", "message.body.some", storage.use_sub_path("passbyreference/")
+                data, "message.body.some", "message.body.some", self.storage.use_sub_path("passbyreference/")
             )
 
             data = Executor.storebyreference(
-                data, "message.body.more", "message.body.more", storage.use_sub_path("passbyreference/")
+                data, "message.body.more", "message.body.more", self.storage.use_sub_path("passbyreference/")
             )
         
         with mock.patch.object(_, 'unique_identifier', side_effect=["output_storage_key_some", "output_storage_key_more"]):
@@ -595,7 +586,7 @@ class TestPassByReference(unittest.TestCase):
                             "more": "other data"
                         }
                     },
-                    "storage": storage, 
+                    "storage": self.storage, 
                     "config": {
                         "input_operations": {
                             "passbyreference": ["message.body.some", "message.body.more"]
