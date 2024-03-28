@@ -998,6 +998,7 @@ class TestTransactions(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.original_cwd = os.getcwd()
         os.chdir(self.temp_dir.name)
+        self.storage = LocalStorage(self.temp_dir.name)
 
     def tearDown(self):
         os.chdir(self.original_cwd)
@@ -1005,8 +1006,6 @@ class TestTransactions(unittest.TestCase):
 
     @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="unique_storage_key")
     def test_transaction_dne(self, mock_unique_identifier):
-        storage = LocalStorage()
-
         @Executor.transactions
         def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
@@ -1019,34 +1018,33 @@ class TestTransactions(unittest.TestCase):
             "message": {
                 "body": "data",
             },
-            "storage": storage,
+            "storage": self.storage,
         }
 
         result_generator = test_func(Mock(), data)
         result_data = next(result_generator)
         result_data.pop("transaction")
 
-        self.assertDictEqual({"message": {"body": "modified data"}, "storage": storage, "output": {"transaction": "transactionkey_unique_storage_key"}}, result_data)
+        self.assertDictEqual({"message": {"body": "modified data"}, "storage": self.storage, "output": {"transaction": "transactionkey_unique_storage_key"}}, result_data)
 
         expected_file_path = os.path.join(
-            ".hypergo_storage", "transactions", "transactionkey_unique_storage_key"
+            self.temp_dir.name, ".hypergo_storage", "transactions", "transactionkey_unique_storage_key"
         )
+
+        print(f"expected file path: {expected_file_path}")
 
         self.assertTrue(
             os.path.exists(expected_file_path), "File was not created as expected"
         )
         with open(expected_file_path, "r", encoding="utf-8") as file:
-            # I think this is the temporary result, right?
             self.assertEqual(
                 file.read(),
-                '{"txid": "unique_storage_key", "data": {}}',
+                '{"txid": "unique_storage_key", "data": {"txid": "unique_storage_key"}}',
                 "File content does not match expected",
             )
 
-    @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="txid")
+    @mock.patch("hypergo.utility.Utility.unique_identifier", return_value="unique_storage_key")
     def test_transaction_exists(self, mock_unique_identifier):
-        storage = LocalStorage()
-
         @Executor.transactions
         def test_func(mock_executor, data):
             message_body_in_the_function = data["message"]["body"]
@@ -1057,13 +1055,13 @@ class TestTransactions(unittest.TestCase):
 
         existing_transaction = Transaction("txid", {"some": "data"})
         serialized_transaction = existing_transaction.serialize()
-        storage.save(f"transactionkey_{existing_transaction.txid}", serialized_transaction)
+        self.storage.save(f"transactionkey_{existing_transaction.txid}", serialized_transaction)
 
         data = {
             "message": {
                 "body": "data",
             },
-            "storage": storage,
+            "storage": self.storage,
             "transaction": existing_transaction
         }
 
@@ -1072,20 +1070,19 @@ class TestTransactions(unittest.TestCase):
 
         result_data.pop("transaction")
 
-        self.assertDictEqual({"message": {"body": "modified data"}, "storage": storage, "output": {"transaction": "transactionkey_txid"}}, result_data)
+        self.assertDictEqual({"message": {"body": "modified data"}, "storage": self.storage, "output": {"transaction": "transactionkey_unique_storage_key"}}, result_data)
 
         expected_file_path = os.path.join(
-            ".hypergo_storage", "transactions", "transactionkey_txid"
+            self.temp_dir.name, ".hypergo_storage", "transactions", "transactionkey_unique_storage_key"
         )
 
         self.assertTrue(
             os.path.exists(expected_file_path), "File was not created as expected"
         )
         with open(expected_file_path, "r", encoding="utf-8") as file:
-            # I think this is a temporary result, right? why is data empty?
             self.assertEqual(
                 file.read(),
-                '{"txid": "txid", "data": {}}',
+                '{"txid": "unique_storage_key", "data": {"txid": "unique_storage_key"}}',
                 "File content does not match expected",
             )
 
