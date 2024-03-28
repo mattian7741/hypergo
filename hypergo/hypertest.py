@@ -174,7 +174,7 @@ class Executor:
                 **kwargs,
             ):
                 print(f"im in contextualize result {result}")
-            yield result
+            yield _.deep_get(result, "output")
 
         return wrapper
 
