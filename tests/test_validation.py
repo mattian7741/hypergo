@@ -26,9 +26,6 @@ class TestValidation(unittest.TestCase):
         }
         result_data = TestValidation._test_func(Mock(), data)
 
-        print(type(result_data))
-        print(result_data)
-
         mock_validate.assert_not_called()
 
         self.assertDictEqual(

@@ -17,6 +17,9 @@ def validation(func: Callable[..., Any]) -> Callable[..., Any]:
 
         result = func(self, data)
 
+        output_validation = Utility.deep_get(data, "config.output_validation", None)
+        if output_validation:
+            jsonschema.validate(Utility.deep_get(data, "message.body"), output_validation["schema"])
 
         return result
 
