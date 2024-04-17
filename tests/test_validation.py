@@ -5,6 +5,8 @@ from hypergo.validation import validation
 
 from jsonschema import ValidationError
 
+from hypergo.validation import OutputValidationError
+
 
 class TestValidation(unittest.TestCase):
     @validation
@@ -127,8 +129,9 @@ class TestValidation(unittest.TestCase):
             }
         }
 
-        with self.assertRaises(ValidationError) as assert_context:
+        with self.assertRaises(ValidationError):
             TestValidation._test_func(Mock(), data)
+
 
     def test_bad_output(self) -> None:
         data = {
@@ -157,8 +160,44 @@ class TestValidation(unittest.TestCase):
             }
         }
 
-        with self.assertRaises(ValidationError) as error:
-            TestValidation._test_func(Mock(), data)
+        result = TestValidation._test_func(Mock(), data)
+
+        self.assertIsInstance(result, OutputValidationError)
+        self.assertFalse(result.should_continue)
+
+    
+    def test_bad_output_ignore_invalid_messages(self) -> None:
+        data = {
+            "message": {
+                "body": {
+                    "some": "data"
+                }
+            },
+            "config": {
+                "input_validation": {
+                    "schema": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "type": "object",
+                        "properties": {"some": {"type": "string"}},
+                        "required": ["some"]
+                    },
+                },
+                "output_validation": {
+                    "schema": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "type": "object",
+                        "properties": {"missing": {"type": "string"}},
+                        "required": ["missing"]
+                    },
+                    "skip_if_invalid": True
+                }
+            }
+        }
+
+        result = TestValidation._test_func(Mock(), data)
+
+        self.assertIsInstance(result, OutputValidationError)
+        self.assertTrue(result.should_continue)
 
                 
 if __name__ == '__main__':
