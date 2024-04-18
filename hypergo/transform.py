@@ -7,6 +7,8 @@ from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 from hypergo.utility import Utility, root_node
 
+from hypergo.validation import validate_input, validate_output
+
 T = TypeVar("T")
 
 ENCRYPTIONKEY = "KRAgZMBXbP1OQQEJPvMTa6nfkVq63sgL2ULJIaMgfLA="
@@ -66,11 +68,15 @@ class Transform:
                             self.storage.use_sub_path("transactions"),
                         ],
                     ],
+                    "validation": [
+                        [validate_input],
+                        [validate_output],
+                    ]
                 }[op_name]
                 input_operations = Utility.deep_get(self.config, "input_operations", {})
                 output_operations = Utility.deep_get(self.config, "output_operations", {})
 
-                for oper in ["contextualization", "transaction"]:
+                for oper in ["contextualization", "transaction", "validation"]:
                     input_operations[oper] = []
                     output_operations[oper] = []
                 if op_name in input_operations:
@@ -101,6 +107,7 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
+        print("restore transaction")
         transaction = None
         txid = Utility.deep_get(data, "transaction", None)
         if not txid:
@@ -114,9 +121,10 @@ class Transform:
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
+        print("stash transaction")
         # txid = f"{Utility.deep_get(data, '__txid__')}"
-        txid = f"transactionkey_{Utility.deep_get(data, 'transaction').txid}"
-        storage.save(txid, str(Utility.deep_get(data, "transaction")))
+        txid = f"transactionkey_{Utility.deep_get(data, 'message.transaction').txid}"
+        storage.save(txid, str(Utility.deep_get(data, "message.transaction")))
         Utility.deep_set(data, "transaction", txid)
         # Utility.deep_del(data, "__txid__")
         return data
@@ -128,6 +136,7 @@ class Transform:
         base_storage: Storage,
         config: Dict[str, Any],
     ) -> Any:
+        print("in add context")
         context: Dict[str, Any] = {
             "message": input_message,
             "config": config,

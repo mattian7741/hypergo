@@ -16,6 +16,8 @@ from hypergo.storage import Storage
 from hypergo.transform import Transform
 from hypergo.utility import Utility, traverse_datastructures
 
+from hypergo.validation import OutputValidationError
+
 
 def do_question_mark(context: Dict[str, Any], input_string: Any) -> str:
     def find_best_key(field_path: List[str], routingkey: str) -> str:
@@ -168,6 +170,7 @@ class Executor:
     @Transform.operation("transaction")
     @Transform.operation("serialization")
     @Transform.operation("contextualization")
+    @Transform.operation("validation")
     @function_log
     def execute(self, context: Any) -> Generator[MessageType, None, None]:
         # This mutates config with substitutions - not necessary for input binding substitution
@@ -179,12 +182,13 @@ class Executor:
         args: List[Any] = self.get_args(context)
         execution: Any = self._func_spec(*args)
 
+        print(f"execution: {execution}\n")
+
         output_routing_key: str = self.get_output_routing_key(Utility.deep_get(context, "message.routingkey"))
         if not inspect.isgenerator(execution):
             execution = [execution]
         for return_value in execution:
-            # if not return_value:
-            #     continue
+            print(f"return_value in executor: {return_value}\n")
 
             output_message: MessageType = {
                 "routingkey": output_routing_key,
@@ -210,7 +214,7 @@ class Executor:
             else:
                 handle_default(output_context, return_value)
 
-            yield output_message
+            yield output_context
 
     def organize_tokens(self, keys: List[str]) -> str:
         return ".".join(sorted(set(".".join(keys).split("."))))
