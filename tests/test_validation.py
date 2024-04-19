@@ -1,22 +1,13 @@
 import unittest
-from unittest.mock import Mock, patch
-
-from hypergo.validation import validation
+from unittest.mock import patch
 
 from jsonschema import ValidationError
 
-from hypergo.validation import OutputValidationError
+from hypergo.validation import OutputValidationError, validate_input, validate_output
 
 
-class TestValidation(unittest.TestCase):
-    @validation
-    @staticmethod
-    def _test_func(self, data):
-        message_body = data["message"]["body"]["some"]
-        data["message"]["body"]["some"] = f"modified {message_body}"
-        return data
-    
-    @patch("jsonschema.validate")
+class TestValidateInput(unittest.TestCase):    
+    @patch("hypergo.validation.validate")
     def test_no_validation(self, mock_validate) -> None:
         data = {
             "message": {
@@ -26,23 +17,12 @@ class TestValidation(unittest.TestCase):
             },
             "config": {}
         }
-        result_data = TestValidation._test_func(Mock(), data)
+        validate_input(data, None)
 
         mock_validate.assert_not_called()
 
-        self.assertDictEqual(
-            result_data,
-            {
-                "message": {
-                    "body": {
-                        "some": "modified data"
-                    }
-                },
-                "config": {}
-            }
-        )
-
-    def test_happy_path(self) -> None:
+    @patch("hypergo.validation.validate")
+    def test_validate(self, mock_validate) -> None:
         data = {
             "message": {
                 "body": {
@@ -57,83 +37,30 @@ class TestValidation(unittest.TestCase):
                         "properties": {"some": {"type": "string"}},
                         "required": ["some"]
                     },
-                },
-                "output_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"some": {"type": "string"}},
-                        "required": ["some"]
-                    }
                 }
             }
         }
-        result_data = TestValidation._test_func(Mock(), data)
+        validate_input(data, None)
 
-        print(type(result_data))
-        print(result_data)
+        mock_validate.assert_called_once()
 
-        self.assertDictEqual(
-            result_data,
-            {
-                "message": {
-                    "body": {
-                        "some": "modified data"
-                    }
-                },
-                "config": {
-                    "input_validation": {
-                        "schema": {
-                            "$schema": "http://json-schema.org/draft-04/schema#",
-                            "type": "object",
-                            "properties": {"some": {"type": "string"}},
-                            "required": ["some"]
-                        },
-                    },
-                    "output_validation": {
-                        "schema": {
-                            "$schema": "http://json-schema.org/draft-04/schema#",
-                            "type": "object",
-                            "properties": {"some": {"type": "string"}},
-                            "required": ["some"]
-                        }
-                    }
-                }
-            }
-        )
 
-    def test_bad_input(self) -> None:
+class TestValidateOutput(unittest.TestCase):  
+    @patch("hypergo.validation.validate")
+    def test_no_validation(self, mock_validate) -> None:
         data = {
             "message": {
                 "body": {
-                    "some": -1
+                    "some": "data"
                 }
             },
-            "config": {
-                "input_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"some": {"type": "string"}},
-                        "required": ["some"]
-                    },
-                },
-                "output_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"some": {"type": "string"}},
-                        "required": ["some"]
-                    }
-                }
-            }
+            "config": {}
         }
+        validate_output(data, None)
 
-        with self.assertRaises(ValidationError):
-            TestValidation._test_func(Mock(), data)
+        mock_validate.assert_not_called()
 
-
-    def test_bad_output(self) -> None:
+    def test_bad_input_dont_ignore(self) -> None:
         data = {
             "message": {
                 "body": {
@@ -141,14 +68,6 @@ class TestValidation(unittest.TestCase):
                 }
             },
             "config": {
-                "input_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"some": {"type": "string"}},
-                        "required": ["some"]
-                    },
-                },
                 "output_validation": {
                     "schema": {
                         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -160,13 +79,10 @@ class TestValidation(unittest.TestCase):
             }
         }
 
-        result = TestValidation._test_func(Mock(), data)
+        result = validate_output(data, None)
+        self.assertFalse(result["exception"].should_continue)
 
-        self.assertIsInstance(result, OutputValidationError)
-        self.assertFalse(result.should_continue)
-
-    
-    def test_bad_output_ignore_invalid_messages(self) -> None:
+    def test_bad_input_ignore(self) -> None:
         data = {
             "message": {
                 "body": {
@@ -174,14 +90,6 @@ class TestValidation(unittest.TestCase):
                 }
             },
             "config": {
-                "input_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"some": {"type": "string"}},
-                        "required": ["some"]
-                    },
-                },
                 "output_validation": {
                     "schema": {
                         "$schema": "http://json-schema.org/draft-04/schema#",
@@ -194,12 +102,12 @@ class TestValidation(unittest.TestCase):
             }
         }
 
-        result = TestValidation._test_func(Mock(), data)
+        result = validate_output(data, None)
+        exception = result["exception"]
 
-        self.assertIsInstance(result, OutputValidationError)
-        self.assertTrue(result.should_continue)
+        self.assertIsInstance(exception, OutputValidationError)
+        self.assertTrue(result["exception"].should_continue)
 
-                
 if __name__ == '__main__':
     # Run the unit tests
     unittest.main()
