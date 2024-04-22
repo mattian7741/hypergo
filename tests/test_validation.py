@@ -1,8 +1,6 @@
 import unittest
 from unittest.mock import patch
 
-from jsonschema import ValidationError
-
 from hypergo.validation import OutputValidationError, validate_input, validate_output
 
 
@@ -80,7 +78,7 @@ class TestValidateOutput(unittest.TestCase):
         }
 
         result = validate_output(data, None)
-        self.assertFalse(result["exception"].should_continue)
+        self.assertFalse(result["exception"].should_be_ignored)
 
     def test_bad_input_ignore(self) -> None:
         data = {
@@ -106,7 +104,7 @@ class TestValidateOutput(unittest.TestCase):
         exception = result["exception"]
 
         self.assertIsInstance(exception, OutputValidationError)
-        self.assertTrue(result["exception"].should_continue)
+        self.assertTrue(result["exception"].should_be_ignored)
 
 if __name__ == '__main__':
     # Run the unit tests

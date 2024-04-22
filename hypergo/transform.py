@@ -44,7 +44,7 @@ class Transform:
                     "compression": [[Utility.uncompress], [Utility.compress]],
                     "serialization": [
                         [Utility.deserialize],
-                        [Utility.serialize],
+                        [Utility.serialize, "message"],
                     ],
                     "pass_by_reference": [
                         [Transform.fetchbyreference, self.storage],
@@ -92,12 +92,6 @@ class Transform:
                 for result in func(self, data):
                     if op_name in output_operations:
                         for key in output_operations[op_name] or [None]:
-                            try:
-                                tokens = key.split(".")
-                                if tokens[0] == "message":
-                                    key = ".".join(tokens[1:])
-                            except AttributeError:
-                                pass
                             result = args[1][0](result, key, *args[1][1:])
                     yield result
 
@@ -107,7 +101,6 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
-        print("restore transaction")
         transaction = None
         txid = Utility.deep_get(data, "transaction", None)
         if not txid:
@@ -115,18 +108,15 @@ class Transform:
             txid = f"transactionkey_{transaction.txid}"
         else:
             transaction = Transaction.from_str(storage.load(txid))
-        # Utility.deep_set(data, "__txid__", txid)
         Utility.deep_set(data, "transaction", transaction)
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
-        print("stash transaction")
-        # txid = f"{Utility.deep_get(data, '__txid__')}"
-        txid = f"transactionkey_{Utility.deep_get(data, 'message.transaction').txid}"
-        storage.save(txid, str(Utility.deep_get(data, "message.transaction")))
-        Utility.deep_set(data, "transaction", txid)
-        # Utility.deep_del(data, "__txid__")
+        transaction = Utility.deep_get(data, 'message.transaction')
+        txid = f"transactionkey_{transaction.txid}"
+        storage.save(txid, str(transaction))
+        Utility.deep_set(data, "message.transaction", txid)
         return data
 
     @staticmethod
@@ -136,7 +126,6 @@ class Transform:
         base_storage: Storage,
         config: Dict[str, Any],
     ) -> Any:
-        print("in add context")
         context: Dict[str, Any] = {
             "message": input_message,
             "config": config,

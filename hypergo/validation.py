@@ -1,23 +1,21 @@
-from functools import wraps
 from typing import Any
 
 from jsonschema import ValidationError, validate
 
-from hypergo.utility import root_node, Utility
+from hypergo.utility import Utility
 
+class Ignorable:
+    def __init__(self, should_be_ignored=False):
+        self.should_be_ignored = should_be_ignored
 
-class OutputValidationError(ValidationError):
-    def __init__(self, parent_error, should_continue=False):
-        print(f"in init. parent: {parent_error.__dict__}\n")
+class OutputValidationError(ValidationError, Ignorable):
+    def __init__(self, parent_error, should_be_ignored=False):
         super().__init__(parent_error.message)
-        self.should_continue = should_continue
-        print(f"exiting init. self: {self.__dict__}\n")
+        Ignorable.__init__(self, should_be_ignored)
 
 
 @staticmethod
 def validate_input(data: Any, key: str) -> Any:
-    print(f"in validation data: {data}\n\n")
-
     input_validation = Utility.deep_get(data, "config.input_validation", None)
     if input_validation:
         validate(Utility.deep_get(data, "message.body"), input_validation["schema"])
@@ -26,16 +24,12 @@ def validate_input(data: Any, key: str) -> Any:
 
 @staticmethod
 def validate_output(data: Any, key: str) -> Any:
-    print(f"in output validation data: {data}\n\n")
     output_validation = Utility.deep_get(data, "config.output_validation", None)
 
     if output_validation:
         try:
-            print(f"output_validation {output_validation}")
             validate(Utility.deep_get(data, "message.body"), output_validation["schema"])
-            print("it passed\n")
         except ValidationError as error:
-            print("it failed\n")
             Utility.deep_set(
                 data,
                 "exception",
