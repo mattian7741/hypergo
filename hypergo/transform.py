@@ -6,7 +6,6 @@ from hypergo.custom_types import JsonDict
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 from hypergo.utility import Utility, root_node
-
 from hypergo.validation import validate_input, validate_output
 
 T = TypeVar("T")
@@ -71,7 +70,7 @@ class Transform:
                     "validation": [
                         [validate_input],
                         [validate_output],
-                    ]
+                    ],
                 }[op_name]
                 input_operations = Utility.deep_get(self.config, "input_operations", {})
                 output_operations = Utility.deep_get(self.config, "output_operations", {})

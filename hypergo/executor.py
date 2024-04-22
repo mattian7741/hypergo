@@ -15,7 +15,6 @@ from hypergo.secrets import LocalSecrets, Secrets
 from hypergo.storage import Storage
 from hypergo.transform import Transform
 from hypergo.utility import Utility, traverse_datastructures
-
 from hypergo.validation import OutputValidationError
 
 
@@ -192,11 +191,7 @@ class Executor:
                 "transaction": Utility.deep_get(context, "message.transaction"),
                 # "__txid__": Utility.deep_get(context, "message.__txid__"),
             }
-            output_context: ContextType = {
-                "message": output_message,
-                "config": self._config,
-                "exception": None
-            }
+            output_context: ContextType = {"message": output_message, "config": self._config, "exception": None}
 
             def handle_tuple(dst: ContextType, src: Any) -> None:
                 for binding, tuple_elem in zip(self._config["output_bindings"], src):

@@ -5,10 +5,8 @@ from hypergo.config import ConfigType
 from hypergo.executor import Executor
 from hypergo.message import MessageType
 from hypergo.monitor import collect_metrics
-
-from hypergo.validation import Ignorable
-
 from hypergo.utility import Utility
+from hypergo.validation import Ignorable
 
 
 class Connection(ABC):
@@ -23,7 +21,7 @@ class Connection(ABC):
             exception = Utility.deep_get(execution_result, 'exception')
             if exception:
                 if isinstance(exception, Ignorable) and exception.should_be_ignored:
-                    print(f"Ignoring exception type {type(exception)}: {exception}")
+                    print(f"Skipping message with exception type {type(exception)}: {exception}")
                     continue
                 else:
                     raise exception
