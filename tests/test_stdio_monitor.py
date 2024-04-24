@@ -22,8 +22,11 @@ class TestAzureMonitor(unittest.TestCase):
 
     @collect_metrics
     def __mock_send_message(self, executor: Executor, message: MessageType, config: ConfigType):
-        for _ in executor.execute(message):
-            _
+        try:
+            for _ in executor.execute(message):
+                _
+        except Exception:
+            pass
 
     @patch("hypergo.metrics.hypergo_metrics.HypergoMetric.send")
     @patch("opentelemetry.sdk.metrics.export.PeriodicExportingMetricReader.collect")

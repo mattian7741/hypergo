@@ -15,7 +15,6 @@ from hypergo.secrets import LocalSecrets, Secrets
 from hypergo.storage import Storage
 from hypergo.transform import Transform
 from hypergo.utility import Utility, traverse_datastructures
-from hypergo.validation import OutputValidationError
 
 
 def do_question_mark(context: Dict[str, Any], input_string: Any) -> str:
@@ -43,14 +42,16 @@ def do_substitution(value: Any, data: Dict[str, Any]) -> Any:
     def substitute(string: str, data: Dict[str, Any]) -> Any:
         result = string
         if isinstance(string, str):
-            match: Optional[Match[str]] = re.match(r"^{([^}]+)}$", string)
+            matched_regex: Optional[Match[str]] = re.match(r"^{([^}]+)}$", string)
             result = (
                 Utility.deep_get(
                     data,
-                    do_question_mark(data, match.group(1)),
-                    match.group(0),
+                    do_question_mark(data, matched_regex.group(1)),
+                    matched_regex.group(0),
                 )
-                if match
+                # version 2.0.0 and above
+                if matched_regex
+                # backward compatibility
                 else re.sub(
                     r"{([^}]+)}",
                     lambda match: str(
@@ -63,6 +64,10 @@ def do_substitution(value: Any, data: Dict[str, Any]) -> Any:
                     string,
                 )
             )
+
+            # We were substituting message.* in the string with the actual payload
+            if re.match(r"^.*\{message\.[^\}]+\}.*$", string):
+                return result
 
         if result != string:
             result = substitute(result, data)
@@ -134,7 +139,7 @@ class Executor:
             val if argtype == inspect.Parameter.empty else Utility.safecast(argtype, val)
             for val, argtype in zip(
                 do_substitution(
-                    Utility.deep_get(self._config, "input_bindings"),
+                    Utility.deep_get(self.config, "input_bindings"),
                     cast(Dict[str, Any], context),
                 ),
                 self._arg_spec,
@@ -144,7 +149,7 @@ class Executor:
     def get_output_routing_key(self, input_message_routing_key: str) -> str:
         routing_key_set: Set[str] = set(input_message_routing_key.split("."))
         tokens: List[str] = []
-        for input_key in self._config["input_keys"]:
+        for input_key in self.config["input_keys"]:
             # hypergo-144 dynamic routing key only for generic components
             # output key will contain context derived from the previous
             # producer routing key
@@ -158,7 +163,7 @@ class Executor:
         token: str = self.organize_tokens(tokens)
         output_tokens: List[str] = [
             re.sub(r"(?<=\.)\?(?=\.)|^\?|(?<=\.)\?$|^\?$", token, output_key)
-            for output_key in self._config["output_keys"]
+            for output_key in self.config["output_keys"]
         ]
         return self.organize_tokens(output_tokens)
 
@@ -191,14 +196,18 @@ class Executor:
                 "transaction": Utility.deep_get(context, "message.transaction"),
                 # "__txid__": Utility.deep_get(context, "message.__txid__"),
             }
-            output_context: ContextType = {"message": output_message, "config": self._config, "exception": None}
+            output_context: ContextType = {
+                "message": output_message,
+                "config": self.config,
+                "exception": None
+            }
 
             def handle_tuple(dst: ContextType, src: Any) -> None:
-                for binding, tuple_elem in zip(self._config["output_bindings"], src):
+                for binding, tuple_elem in zip(self.config["output_bindings"], src):
                     Utility.deep_set(dst, binding, tuple_elem)
 
             def handle_default(dst: ContextType, src: Any) -> None:
-                for binding in self._config["output_bindings"]:
+                for binding in self.config["output_bindings"]:
                     Utility.deep_set(dst, binding, src)
 
             if isinstance(return_value, tuple):

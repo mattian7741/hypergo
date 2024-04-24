@@ -1,8 +1,9 @@
 import os
 from functools import wraps
-from typing import Any, Callable, Dict, Generator, List, Tuple, TypeVar, cast
+from typing import (Any, Callable, Dict, Generator, List, Tuple, TypeVar,
+                    Union, cast)
 
-from hypergo.custom_types import JsonDict
+from hypergo.custom_types import JsonDict, TypedDictType
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 from hypergo.utility import Utility, root_node
@@ -143,7 +144,9 @@ class Transform:
     @staticmethod
     @root_node
     @config_v0_v1_passbyreference_backward_compatible
-    def storebyreference(data: Any, key: str, base_storage: Storage) -> Any:
+    def storebyreference(
+        data: Union[TypedDictType, Dict[str, Any]], key: str, base_storage: Storage
+    ) -> Union[TypedDictType, Dict[str, Any]]:
         storage: Storage = base_storage.use_sub_path("passbyreference")
         str_result = Utility.stringify(Utility.deep_get(data, key))
         out_storage_key = f"storagekey_{Utility.hash(str_result)}"
@@ -154,7 +157,9 @@ class Transform:
     @staticmethod
     @root_node
     @config_v0_v1_passbyreference_backward_compatible
-    def fetchbyreference(data: Any, key: str, base_storage: Storage) -> Any:
+    def fetchbyreference(
+        data: Union[TypedDictType, Dict[str, Any]], key: str, base_storage: Storage
+    ) -> Union[TypedDictType, Dict[str, Any]]:
         storage = base_storage.use_sub_path("passbyreference")
         storage_key = Utility.deep_get(cast(JsonDict, data), key)
         loaded = storage.load(storage_key)

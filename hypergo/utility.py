@@ -1,25 +1,102 @@
+from __future__ import print_function
+
 import base64
 import binascii
+import cProfile
 import hashlib
 import inspect
 import json
 import lzma
 import os
 import uuid
+from collections import deque
 from datetime import datetime
 from functools import wraps
 from importlib import import_module
+from itertools import chain
+from sys import getsizeof, stderr
 from types import ModuleType
 from typing import (Any, Callable, Dict, Mapping, Optional, Tuple, Union, cast,
                     get_origin)
 
 import dill
-import glom
+#import glom
 import pydash
 import yaml
 from cryptography.fernet import Fernet
+from line_profiler import LineProfiler
 
 from hypergo.custom_types import JsonType, TypedDictType
+
+
+# ref https://code.activestate.com/recipes/577504/
+def total_size(o: object, verbose: bool = False) -> int:
+    """Returns the approximate memory footprint an object and all of its contents.
+
+    Automatically finds the contents of the following builtin containers and
+    their subclasses:  tuple, list, deque, dict, set and frozenset.
+
+    """
+
+    def dict_handler(d: Dict[Any, Any]) -> Any:
+        return chain.from_iterable(d.items())
+
+    all_handlers: Dict[Any, Any] = {
+        tuple: iter,
+        list: iter,
+        deque: iter,
+        dict: dict_handler,
+        set: iter,
+        frozenset: iter,
+    }
+
+    seen = set()  # track which object id's have already been seen
+    # estimate sizeof object without __sizeof__
+    default_size = getsizeof(0)
+
+    def sizeof(o: object) -> int:
+        if id(o) in seen:  # do not double count the same object
+            return 0
+        seen.add(id(o))
+        s = getsizeof(o, default_size)
+
+        if verbose:
+            print(s, type(o), repr(o), file=stderr)
+
+        for typ, handler in all_handlers.items():
+            if isinstance(o, typ):
+                s += sum(map(sizeof, handler(o)))
+                break
+        return s
+
+    return sizeof(o)
+
+
+def do_cprofile(func: Callable[..., Any]) -> Callable[..., Any]:
+    def profiled_func(*args: Tuple[Any, ...], **kwargs: Any) -> Any:
+        profile = cProfile.Profile(builtins=False)
+        try:
+            profile.enable()
+            result = func(*args, **kwargs)
+            profile.disable()
+            return result
+        finally:
+            profile.print_stats("cumtime")
+
+    return profiled_func
+
+
+def do_line_profile(func: Callable[..., Any]) -> Callable[..., Any]:
+    def profiled_func(*args: Tuple[Any, ...], **kwargs: Any) -> Any:
+        try:
+            profiler = LineProfiler()
+            profiler.add_function(func)
+            profiler.enable_by_count()
+            return func(*args, **kwargs)
+        finally:
+            profiler.print_stats()
+
+    return profiled_func
 
 
 def traverse_datastructures(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -90,7 +167,8 @@ class Utility:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def deep_set(dic: Union[TypedDictType, Dict[str, Any]], key: str, val: Any) -> None:
-        glom.assign(dic, key, val, missing=dict)
+        #glom.assign(dic, key, val, missing=dict)
+        pydash.set_(dic, key, val)
 
     @staticmethod
     def yaml_read(file_name: str) -> Mapping[str, Any]:

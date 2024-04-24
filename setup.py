@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 # Define the setup parameters
 setup(
     name='hypergo',
-    version='0.3.6',  # Enclose the version number in quotes
+    version='0.3.7',  # Enclose the version number in quotes
     description='Project for service bus',
     long_description_content_type='text/markdown',
     packages=find_packages(),
@@ -34,7 +34,8 @@ setup(
         "opentelemetry-semantic-conventions",
         "psutil",
         "mock",
-        "freezegun"
+        "freezegun",
+        "line-profiler"
     ],
     entry_points={
         "console_scripts": [

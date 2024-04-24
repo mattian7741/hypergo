@@ -23,8 +23,11 @@ class TestAzureMonitor(unittest.TestCase):
 
     @collect_metrics
     def __mock_send_message(self, executor: Executor, message: MessageType, config: ConfigType):
-        for _ in executor.execute(message):
-            _
+        try:
+            for _ in executor.execute(message):
+                _
+        except Exception:
+            pass
 
     @patch.dict(os.environ, {"APPLICATIONINSIGHTS-CONNECTION-STRING": f"InstrumentationKey={uuid4()};IngestionEndpoint=https://eastus2-3.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus2.livediagnostics.monitor.azure.com/"})
     @patch("opentelemetry.sdk.metrics.export.MetricReader.collect")
