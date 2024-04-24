@@ -174,6 +174,7 @@ class Executor:
     @Transform.operation("transaction")
     @Transform.operation("serialization")
     @Transform.operation("contextualization")
+    @Transform.operation("validation")
     @function_log
     def execute(self, context: Any) -> Generator[MessageType, None, None]:
         # This mutates config with substitutions - not necessary for input binding substitution
@@ -189,9 +190,6 @@ class Executor:
         if not inspect.isgenerator(execution):
             execution = [execution]
         for return_value in execution:
-            # if not return_value:
-            #     continue
-
             output_message: MessageType = {
                 "routingkey": output_routing_key,
                 "body": {},
@@ -201,6 +199,7 @@ class Executor:
             output_context: ContextType = {
                 "message": output_message,
                 "config": self.config,
+                "exception": None
             }
 
             def handle_tuple(dst: ContextType, src: Any) -> None:
@@ -216,7 +215,7 @@ class Executor:
             else:
                 handle_default(output_context, return_value)
 
-            yield output_message
+            yield output_context
 
     def organize_tokens(self, keys: List[str]) -> str:
         return ".".join(sorted(set(".".join(keys).split("."))))

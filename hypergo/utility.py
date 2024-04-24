@@ -232,9 +232,11 @@ class Utility:  # pylint: disable=too-many-public-methods
         return cast(JsonType, json.loads(string))
 
     @staticmethod
-    @root_node
     @traverse_datastructures
     def serialize(obj: Any, key: Optional[str] = None) -> Any:
+        if key:
+            obj = Utility.deep_get(obj, key)
+
         if type(obj) in [None, bool, int, float, str]:
             return cast(Union[None, bool, int, float, str], obj)
 

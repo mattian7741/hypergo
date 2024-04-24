@@ -7,6 +7,7 @@ from hypergo.custom_types import JsonDict, TypedDictType
 from hypergo.storage import Storage
 from hypergo.transaction import Transaction
 from hypergo.utility import Utility, root_node
+from hypergo.validation import validate_input, validate_output
 
 T = TypeVar("T")
 
@@ -43,7 +44,7 @@ class Transform:
                     "compression": [[Utility.uncompress], [Utility.compress]],
                     "serialization": [
                         [Utility.deserialize],
-                        [Utility.serialize],
+                        [Utility.serialize, "message"],
                     ],
                     "pass_by_reference": [
                         [Transform.fetchbyreference, self.storage],
@@ -67,11 +68,15 @@ class Transform:
                             self.storage.use_sub_path("transactions"),
                         ],
                     ],
+                    "validation": [
+                        [validate_input],
+                        [validate_output],
+                    ],
                 }[op_name]
                 input_operations = Utility.deep_get(self.config, "input_operations", {})
                 output_operations = Utility.deep_get(self.config, "output_operations", {})
 
-                for oper in ["contextualization", "transaction"]:
+                for oper in ["contextualization", "transaction", "validation"]:
                     input_operations[oper] = []
                     output_operations[oper] = []
                 if op_name in input_operations:
@@ -87,12 +92,6 @@ class Transform:
                 for result in func(self, data):
                     if op_name in output_operations:
                         for key in output_operations[op_name] or [None]:
-                            try:
-                                tokens = key.split(".")
-                                if tokens[0] == "message":
-                                    key = ".".join(tokens[1:])
-                            except AttributeError:
-                                pass
                             result = args[1][0](result, key, *args[1][1:])
                     yield result
 
@@ -109,17 +108,15 @@ class Transform:
             txid = f"transactionkey_{transaction.txid}"
         else:
             transaction = Transaction.from_str(storage.load(txid))
-        # Utility.deep_set(data, "__txid__", txid)
         Utility.deep_set(data, "transaction", transaction)
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
-        # txid = f"{Utility.deep_get(data, '__txid__')}"
-        txid = f"transactionkey_{Utility.deep_get(data, 'transaction').txid}"
-        storage.save(txid, str(Utility.deep_get(data, "transaction")))
-        Utility.deep_set(data, "transaction", txid)
-        # Utility.deep_del(data, "__txid__")
+        transaction = Utility.deep_get(data, 'message.transaction')
+        txid = f"transactionkey_{transaction.txid}"
+        storage.save(txid, str(transaction))
+        Utility.deep_set(data, "message.transaction", txid)
         return data
 
     @staticmethod

@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(SCRIPT_DIR))
 from hypergo.utility import Utility
 
 
-class TestUtility(unittest.TestCase):
+class TestUtilitySerialization(unittest.TestCase):
 
     def test_scalar_values(self):
         # Test scalar values (str, int, float, bool, None)
