@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import patch
+from jsonschema.exceptions import ValidationError
 
-from hypergo.validation import OutputValidationError, validate_input, validate_output
+from hypergo.validation import validate_input, validate_output
 
 
 class TestValidateInput(unittest.TestCase):    
@@ -19,8 +20,7 @@ class TestValidateInput(unittest.TestCase):
 
         mock_validate.assert_not_called()
 
-    @patch("hypergo.validation.validate")
-    def test_validate(self, mock_validate) -> None:
+    def test_valid_data(self) -> None:
         data = {
             "message": {
                 "body": {
@@ -28,19 +28,37 @@ class TestValidateInput(unittest.TestCase):
                 }
             },
             "config": {
-                "input_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"some": {"type": "string"}},
-                        "required": ["some"]
-                    },
-                }
+                "input_schema": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "type": "object",
+                    "properties": {"some": {"type": "string"}},
+                    "required": ["some"]
+                },
             }
         }
-        validate_input(data, None)
+        result = validate_input(data, None)
 
-        mock_validate.assert_called_once()
+        self.assertDictEqual(data, result)
+
+    def test_invalid_data(self) -> None:
+        data = {
+            "message": {
+                "body": {
+                    "some": "data"
+                }
+            },
+            "config": {
+                "input_schema": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "type": "object",
+                    "properties": {"missing": {"type": "string"}},
+                    "required": ["missing"]
+                },
+            }
+        }
+
+        with self.assertRaises(ValidationError):
+            validate_input(data, None)
 
 
 class TestValidateOutput(unittest.TestCase):  
@@ -58,7 +76,7 @@ class TestValidateOutput(unittest.TestCase):
 
         mock_validate.assert_not_called()
 
-    def test_bad_input_dont_ignore(self) -> None:
+    def test_valid_data(self) -> None:
         data = {
             "message": {
                 "body": {
@@ -66,21 +84,19 @@ class TestValidateOutput(unittest.TestCase):
                 }
             },
             "config": {
-                "output_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"missing": {"type": "string"}},
-                        "required": ["missing"]
-                    }
-                }
+                "output_schema": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "type": "object",
+                    "properties": {"some": {"type": "string"}},
+                    "required": ["some"]
+                },
             }
         }
-
         result = validate_output(data, None)
-        self.assertFalse(result["exception"].should_be_ignored)
 
-    def test_bad_input_ignore(self) -> None:
+        self.assertDictEqual(data, result)
+
+    def test_invalid_data(self) -> None:
         data = {
             "message": {
                 "body": {
@@ -88,23 +104,17 @@ class TestValidateOutput(unittest.TestCase):
                 }
             },
             "config": {
-                "output_validation": {
-                    "schema": {
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "type": "object",
-                        "properties": {"missing": {"type": "string"}},
-                        "required": ["missing"]
-                    },
-                    "skip_if_invalid": True
+                "output_schema": {
+                    "$schema": "http://json-schema.org/draft-04/schema#",
+                    "type": "object",
+                    "properties": {"missing": {"type": "string"}},
+                    "required": ["missing"]
                 }
             }
         }
 
-        result = validate_output(data, None)
-        exception = result["exception"]
-
-        self.assertIsInstance(exception, OutputValidationError)
-        self.assertTrue(result["exception"].should_be_ignored)
+        with self.assertRaises(ValidationError):
+            validate_output(data, None)
 
 if __name__ == '__main__':
     # Run the unit tests
