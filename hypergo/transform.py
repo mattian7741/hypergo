@@ -1,4 +1,5 @@
 import os
+import uuid
 from functools import wraps
 from typing import (Any, Callable, Dict, Generator, List, Tuple, TypeVar,
                     Union, cast)
@@ -102,6 +103,7 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
+        print(f"in restore_transaction\n")
         transaction = None
         txid = Utility.deep_get(data, "transaction", None)
         if not txid:
@@ -111,13 +113,16 @@ class Transform:
             transaction = Transaction.from_str(storage.load(txid))
         # Utility.deep_set(data, "__txid__", txid)
         Utility.deep_set(data, "transaction", transaction)
+        print(f"finished restore_transaction\n")
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
-        # txid = f"{Utility.deep_get(data, '__txid__')}"
-        txid = f"transactionkey_{Utility.deep_get(data, 'transaction').txid}"
-        storage.save(txid, str(Utility.deep_get(data, "transaction")))
+        transaction = Utility.deep_get(data, 'transaction')
+        txid = f"transactionkey_{transaction.txid}"
+        routingkey = Utility.deep_get(data, "routingkey")
+        file_path = f"{txid}/{routingkey}_{uuid.uuid4()}"
+        storage.save(file_path, str(transaction))
         Utility.deep_set(data, "transaction", txid)
         # Utility.deep_del(data, "__txid__")
         return data
