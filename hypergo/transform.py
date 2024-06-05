@@ -103,7 +103,6 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
-        print(f"in restore_transaction\n")
         transaction = None
         txid = Utility.deep_get(data, "transaction", None)
         if not txid:
@@ -111,9 +110,7 @@ class Transform:
             txid = f"transactionkey_{transaction.txid}"
         else:
             transaction = Transaction.from_str(storage.load(txid))
-        # Utility.deep_set(data, "__txid__", txid)
         Utility.deep_set(data, "transaction", transaction)
-        print(f"finished restore_transaction\n")
         return data
 
     @staticmethod
@@ -122,9 +119,14 @@ class Transform:
         txid = f"transactionkey_{transaction.txid}"
         routingkey = Utility.deep_get(data, "routingkey")
         file_path = f"{txid}/{routingkey}_{uuid.uuid4()}"
-        storage.save(file_path, str(transaction))
+
+        if len(transaction.peek().keys()) > 1:
+            storage.save(file_path, str(transaction))
+        else:
+            storage.create_directory(file_path)
+
         Utility.deep_set(data, "transaction", txid)
-        # Utility.deep_del(data, "__txid__")
+
         return data
 
     @staticmethod

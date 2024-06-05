@@ -11,6 +11,10 @@ class Storage(ABC):
     def save(self, file_name: str, content: str) -> None:
         pass
 
+    @abstractmethod
+    def create_directory(self, file_name: str) -> None:
+        pass
+
     def use_sub_path(self, sub_path: str) -> "Storage":
         return SubStorage(self, sub_path)
 
@@ -25,3 +29,6 @@ class SubStorage(Storage):
 
     def save(self, file_name: str, content: str) -> None:
         return self._base_storage.save(os.path.join(self._sub_path, file_name), content)
+
+    def create_directory(self, file_name: str,) -> None:
+        self._base_storage.create_directory(file_name)

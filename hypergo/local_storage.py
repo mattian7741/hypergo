@@ -27,3 +27,7 @@ class LocalStorage(Storage):
 
         with open(file_name, "w", encoding="utf-8") as file:
             file.write(content)
+
+    @addsubfolder
+    def create_directory(self, file_name: str) -> None:
+        Utility.create_folders_for_file(file_name)
