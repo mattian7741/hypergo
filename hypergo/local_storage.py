@@ -1,6 +1,7 @@
+import json
 import os
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from hypergo.storage import Storage
 from hypergo.utility import Utility
@@ -20,6 +21,20 @@ class LocalStorage(Storage):
         with open(file_name, "r", encoding="utf-8") as file:
             content: str = file.read()
         return content
+
+    @addsubfolder
+    def load_directory(self, path: str) -> List[str]:
+        print(f"path: {path}")
+        contents = {}
+        all_filenames = [f for f in os.listdir(path) if not f.startswith('.')]
+
+        print(f"all_filenames: {all_filenames}")
+
+        for file_name in all_filenames:
+            with open(f"{path}/{file_name}", "r", encoding="utf-8") as file:
+                contents[file_name] = json.loads(file.read())
+
+        return contents
 
     @addsubfolder
     def save(self, file_name: str, content: str) -> None:

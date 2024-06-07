@@ -3,10 +3,9 @@ from typing import Any, cast
 
 from hypergo.config import ConfigType
 from hypergo.executor import Executor
-from hypergo.logger import logger
+from hypergo.logger import function_log, logger
 from hypergo.message import MessageType
 from hypergo.monitor import collect_metrics
-from hypergo.logger import function_log
 
 
 class Connection(ABC):

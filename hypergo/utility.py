@@ -1,7 +1,5 @@
 from __future__ import print_function
 
-import string
-import random
 import base64
 import binascii
 import cProfile
@@ -10,6 +8,8 @@ import inspect
 import json
 import lzma
 import os
+import random
+import string
 import uuid
 from collections import deque
 from datetime import datetime
@@ -18,11 +18,11 @@ from importlib import import_module
 from itertools import chain
 from sys import getsizeof, stderr
 from types import ModuleType
-from typing import (Any, Callable, Dict, Mapping, Optional, Tuple, Union, cast,
-                    get_origin, Type)
+from typing import (Any, Callable, Dict, Mapping, Optional, Tuple, Type, Union,
+                    cast, get_origin)
 
 import dill
-#import glom
+# import glom
 import pydash
 import yaml
 from cryptography.fernet import Fernet
@@ -186,7 +186,7 @@ class Utility:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def deep_set(dic: Union[TypedDictType, Dict[str, Any]], key: str, val: Any) -> None:
-        #glom.assign(dic, key, val, missing=dict)
+        # glom.assign(dic, key, val, missing=dict)
         pydash.set_(dic, key, val)
 
     @staticmethod

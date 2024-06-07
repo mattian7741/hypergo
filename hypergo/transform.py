@@ -1,4 +1,6 @@
+import json
 import os
+import re
 import uuid
 from functools import wraps
 from typing import (Any, Callable, Dict, Generator, List, Tuple, TypeVar,
@@ -103,29 +105,57 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
+        print("in restore_transaction\n")
         transaction = None
         txid = Utility.deep_get(data, "transaction", None)
         if not txid:
             transaction = Transaction()
             txid = f"transactionkey_{transaction.txid}"
         else:
-            transaction = Transaction.from_str(storage.load(txid))
+            print(f"txid = {txid}")
+            try:
+                tx_files = storage.load_directory(txid)
+            except OSError:
+                tx_files = {}
+
+            print(f"contents: {tx_files}")
+
+            transaction = Transaction.from_file_list(txid, tx_files)
+
         Utility.deep_set(data, "transaction", transaction)
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
+        print(f"stash data: {data}\n")
         transaction = Utility.deep_get(data, 'transaction')
-        txid = f"transactionkey_{transaction.txid}"
+        # This is the wrong routingkey. I need the incoming one, this is the
+        # outgoing one
         routingkey = Utility.deep_get(data, "routingkey")
-        file_path = f"{txid}/{routingkey}_{uuid.uuid4()}"
 
-        if len(transaction.peek().keys()) > 1:
-            storage.save(file_path, str(transaction))
-        else:
-            storage.create_directory(file_path)
+        print(f"transaction: {str(transaction)}")
 
-        Utility.deep_set(data, "transaction", txid)
+        try:
+            tx_files = storage.load_directory(transaction.txid)
+            print(f"tx_files: {tx_files}")
+        except OSError as error:
+            print(f"error: {error}")
+            storage.create_directory(transaction.txid)
+            tx_files = {}
+
+        filename_to_save = None
+
+        for filename, contents in tx_files:
+            if contents["routingkey"] == routingkey:
+                filename_to_save = filename
+
+        if not filename_to_save:
+            routingkey_for_filename = re.sub(r'\.', '-', routingkey)
+            filename_to_save = f"{routingkey_for_filename}_{uuid.uuid4()}"
+
+        file_path = f"{transaction.txid}/{filename_to_save}"
+        storage.save(file_path, transaction.retrieve(transaction.txid, routingkey))
+        Utility.deep_set(data, "transaction", transaction.txid)
 
         return data
 
@@ -136,6 +166,7 @@ class Transform:
         base_storage: Storage,
         config: Dict[str, Any],
     ) -> Any:
+        print("in add_context\n")
         context: Dict[str, Any] = {
             "message": input_message,
             "config": config,
@@ -149,6 +180,7 @@ class Transform:
 
     @staticmethod
     def remove_context(data: Any, key: str) -> Any:
+        print("in remove_context\n")
         return data
 
     @staticmethod
