@@ -315,7 +315,6 @@ class Utility:  # pylint: disable=too-many-public-methods
     @staticmethod
     @root_node
     def encrypt(data: Any, key: str, encryptkey: str) -> Any:
-        print(f"in encrypt data: {data}")
         key_bytes = encryptkey.encode("utf-8")
         data_bytes = Utility.stringify(Utility.deep_get(data, key)).encode("utf-8")
         encrypted_bytes = Fernet(key_bytes).encrypt(data_bytes)
