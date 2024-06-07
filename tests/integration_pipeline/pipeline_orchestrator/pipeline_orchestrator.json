@@ -8,7 +8,7 @@
     "output_keys": ["hypergo.test.orchestrated"],
     "input_bindings": ["{message.body}"],
     "output_bindings": ["message.body"],
-    "input_operations": {},
+    "input_operations": {"encryption": ["message.body"]},
     "output_operations": {},
     "trigger": "service-bus-topic"
 }

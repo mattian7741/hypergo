@@ -167,12 +167,12 @@ class Executor:
         return self.organize_tokens(output_tokens)
 
     @configsubstitution
+    @Transform.operation("contextualization")
     @Transform.operation("pass_by_reference")
     @Transform.operation("compression")
     @Transform.operation("encryption")
     @Transform.operation("transaction")
     @Transform.operation("serialization")
-    @Transform.operation("contextualization")
     def execute(self, context: Any) -> Generator[MessageType, None, None]:
         # This mutates config with substitutions - not necessary for input binding substitution
         # Unclear which approach is better - do we want the original config with references?  Or
@@ -189,6 +189,8 @@ class Executor:
         for return_value in execution:
             # if not return_value:
             #     continue
+
+            print(f"context: {context}\n")
 
             output_message: MessageType = {
                 "routingkey": output_routing_key,

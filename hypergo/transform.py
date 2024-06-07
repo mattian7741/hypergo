@@ -16,6 +16,7 @@ ENCRYPTIONKEY = "KRAgZMBXbP1OQQEJPvMTa6nfkVq63sgL2ULJIaMgfLA="
 def config_v0_v1_passbyreference_backward_compatible(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
     def wrapper(data: Any, key: str, *args: Tuple[Any, ...]) -> Any:
+        print(f"in compatibility data: {data} key {key}\n")
         use_key = key
         if key == "__root__":
             popped = data["__root__"].pop("body") if Utility.deep_has(data, "__root__.body") else None
@@ -76,12 +77,6 @@ class Transform:
                     output_operations[oper] = []
                 if op_name in input_operations:
                     for key in input_operations[op_name] or [None]:
-                        try:
-                            tokens = key.split(".")
-                            if tokens[0] == "message":
-                                key = ".".join(tokens[1:])
-                        except AttributeError:
-                            pass
                         data = args[0][0](data, key, *args[0][1:])
 
                 for result in func(self, data):
@@ -102,6 +97,7 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
+        print(f"in restore transaction data: {data}\n")
         transaction = None
         txid = Utility.deep_get(data, "transaction", None)
         if not txid:
@@ -111,6 +107,7 @@ class Transform:
             transaction = Transaction.from_str(storage.load(txid))
         # Utility.deep_set(data, "__txid__", txid)
         Utility.deep_set(data, "transaction", transaction)
+        Utility.deep_set(data, "message.transaction", transaction)
         return data
 
     @staticmethod
@@ -129,10 +126,11 @@ class Transform:
         base_storage: Storage,
         config: Dict[str, Any],
     ) -> Any:
+        print(f"in add_context input_message: {input_message}\n")
         context: Dict[str, Any] = {
             "message": input_message,
             "config": config,
-            "transaction": input_message["transaction"],
+            "transaction": input_message["transaction"] if "transaction" in input_message else None,
         }
         if base_storage:
             context["storage"] = base_storage.use_sub_path(
@@ -163,9 +161,11 @@ class Transform:
     def fetchbyreference(
         data: Union[TypedDictType, Dict[str, Any]], key: str, base_storage: Storage
     ) -> Union[TypedDictType, Dict[str, Any]]:
+        print(f"in fetchbyreference. Data: {data} key: {key}\n")
         storage = base_storage.use_sub_path("passbyreference")
         storage_key = Utility.deep_get(cast(JsonDict, data), key)
         loaded = storage.load(storage_key)
         the_data = Utility.objectify(loaded)
         Utility.deep_set(data, key, the_data)
+        print(f"data: {data}")
         return data
