@@ -1,6 +1,7 @@
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
+from hypergo.storage import Storage
 from hypergo.utility import Utility
 
 
@@ -15,7 +16,7 @@ class Transaction:
     def __init__(
         self,
         txid: Optional[str] = None,
-        data: Optional[Any] = None,
+        data: Optional[Any] = {},
         parentid: Optional[str] = None,
     ) -> None:
         self._stack: Dict[str, Any] = {}
@@ -34,9 +35,30 @@ class Transaction:
     def peek(self) -> Any:
         return self._stack.get(self.txid)
 
+    def add(self, txid, routingkey, data) -> Any:
+        print(f"stack: {self._stack}")
+        self._stack[txid][routingkey] = data
+
+    def retrieve(self, txid, routingkey) -> Any:
+        print(f"stack: {self._stack}")
+        return self._stack[txid][routingkey]
+
     @staticmethod
     def from_str(txstr: str) -> "Transaction":
         return Transaction(**(json.loads(txstr)))
+
+    @staticmethod
+    def from_file_list(txid: str, files: Dict[str, str]) -> "Transaction":
+        new_tx = Transaction(txid)
+
+        print(f"files: {files}")
+
+        for file_content in files.values():
+            print(f"new_tx: {new_tx}")
+            print(f"file_content: {file_content}")
+            new_tx.add(txid, file_content["routingkey"], file_content["body"])
+
+        return new_tx
 
     @property
     def txid(self) -> str:
@@ -46,10 +68,11 @@ class Transaction:
         return str(self)
 
     def __str__(self) -> str:
+        print(f"body: {self.peek()}")
         return json.dumps(Utility.serialize({"txid": self.txid, "data": self.peek()}, None))
 
     def set(self, key: str, value: Any) -> None:
-        Utility.deep_set(self.peek(), key, value)
+        self._stack[self.txid][key] = {"routingkey": key, "body": value}
 
     def get(self, key: str, default: Optional[Any] = None) -> Any:
         return Utility.deep_get(self.peek(), key, default)

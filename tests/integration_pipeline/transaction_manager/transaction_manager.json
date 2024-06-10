@@ -15,7 +15,7 @@
         "{config.input_keys}",
         "{message.routingkey}",
         "{message.body}",
-        "{transaction}"
+        "{message.transaction}"
     ],
     "output_bindings": [
         "message.body"
