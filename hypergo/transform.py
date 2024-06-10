@@ -101,7 +101,7 @@ class Transform:
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
         print("in restore_transaction\n")
         transaction = None
-        txid = Utility.deep_get(data, "transaction", None)
+        txid = Utility.deep_get(data, "message.transaction", None)
         if not txid:
             transaction = Transaction()
             txid = f"transactionkey_{transaction.txid}"
@@ -118,14 +118,13 @@ class Transform:
 
             transaction = Transaction.from_file_list(txid, tx_files)
 
-        Utility.deep_set(data, "transaction", transaction)
         Utility.deep_set(data, "message.transaction", transaction)
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
         print(f"stash data: {data}\n")
-        transaction = Utility.deep_get(data, 'transaction')
+        transaction = Utility.deep_get(data, "message.transaction")
         # This is the wrong routingkey. I need the incoming one, this is the
         # outgoing one
         routingkey = Utility.deep_get(data, "routingkey")
@@ -152,7 +151,7 @@ class Transform:
 
         file_path = f"{transaction.txid}/{filename_to_save}"
         storage.save(file_path, transaction.retrieve(transaction.txid, routingkey))
-        Utility.deep_set(data, "transaction", transaction.txid)
+        Utility.deep_set(data, "message.transaction", transaction.txid)
 
         return data
 
@@ -163,12 +162,7 @@ class Transform:
         base_storage: Storage,
         config: Dict[str, Any],
     ) -> Any:
-        print("in add_context\n")
-        context: Dict[str, Any] = {
-            "message": input_message,
-            "config": config,
-            "transaction": Utility.deep_get(input_message, "transaction", None)
-        }
+        context: Dict[str, Any] = {"message": input_message, "config": config}
         if base_storage:
             context["storage"] = base_storage.use_sub_path(
                 os.path.join("component", "private", Utility.deep_get(context, "config.name"))
@@ -177,8 +171,7 @@ class Transform:
 
     @staticmethod
     def remove_context(data: Any, key: str) -> Any:
-        print("in remove_context\n")
-        return data
+        return Utility.deep_get(data, "message")
 
     @staticmethod
     @root_node

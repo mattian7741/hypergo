@@ -22,7 +22,6 @@ from typing import (Any, Callable, Dict, Mapping, Optional, Tuple, Type, Union,
                     cast, get_origin)
 
 import dill
-# import glom
 import pydash
 import yaml
 from cryptography.fernet import Fernet
@@ -186,7 +185,6 @@ class Utility:  # pylint: disable=too-many-public-methods
 
     @staticmethod
     def deep_set(dic: Union[TypedDictType, Dict[str, Any]], key: str, val: Any) -> None:
-        # glom.assign(dic, key, val, missing=dict)
         pydash.set_(dic, key, val)
 
     @staticmethod
