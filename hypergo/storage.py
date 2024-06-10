@@ -42,4 +42,4 @@ class SubStorage(Storage):
         self,
         path: str,
     ) -> None:
-        self._base_storage.create_directory(path)
+        self._base_storage.create_directory(os.path.join(self._sub_path, path))

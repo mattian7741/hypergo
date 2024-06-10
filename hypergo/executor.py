@@ -188,16 +188,14 @@ class Executor:
         if not inspect.isgenerator(execution):
             execution = [execution]
         for return_value in execution:
-            # if not return_value:
-            #     continue
-
             output_message: MessageType = {
                 "routingkey": output_routing_key,
                 "body": {},
                 "transaction": Utility.deep_get(context, "message.transaction"),
-                # "__txid__": Utility.deep_get(context, "message.__txid__"),
             }
+
             output_context: ContextType = {
+                "input_routingkey": Utility.deep_get(context, "input_routingkey"),
                 "message": output_message,
                 "config": self.config,
             }

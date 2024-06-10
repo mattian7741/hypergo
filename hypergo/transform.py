@@ -93,59 +93,64 @@ class Transform:
 
     @staticmethod
     def restore_transaction(data: Any, key: str, storage: Storage) -> Any:
-        print("in restore_transaction\n")
+        print(f"restore torage: {storage}")
+        print(f"in restore_transaction, data: {data}\n")
         transaction = None
         txid = Utility.deep_get(data, "message.transaction", None)
         if not txid:
+            print(f"in restore, not txid\n")
             transaction = Transaction()
             txid = f"transactionkey_{transaction.txid}"
-            
-            print(txid)
         else:
-            print(f"txid = {txid}")
+            print(f"in restore, txid = {txid}\n")
             try:
                 tx_files = storage.load_directory(txid)
             except OSError:
                 tx_files = {}
 
-            print(f"contents: {tx_files}")
+            print(f"contents: {tx_files}\n")
 
             transaction = Transaction.from_file_list(txid, tx_files)
 
         Utility.deep_set(data, "message.transaction", transaction)
+        print(f"end restore transaction {transaction.peek()}\n")
         return data
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
-        print(f"stash data: {data}\n")
+        print(f"stash data: {data} storage {storage}\n")
         transaction = Utility.deep_get(data, "message.transaction")
-        # This is the wrong routingkey. I need the incoming one, this is the
-        # outgoing one
-        routingkey = Utility.deep_get(data, "routingkey")
+        input_routingkey = Utility.deep_get(data, "input_routingkey")
+        txid = f"transactionkey_{transaction.txid}"
+        tx_files = {}
 
         print(f"transaction: {str(transaction)}")
 
         try:
-            tx_files = storage.load_directory(transaction.txid)
-            print(f"tx_files: {tx_files}")
+            print(f"about to load directory storage")
+            tx_files = storage.load_directory(txid)
+            print(f"tx_files: {tx_files}\n")
         except OSError as error:
             print(f"error: {error}")
-            storage.create_directory(transaction.txid)
-            tx_files = {}
+            storage.create_directory(txid)
 
-        filename_to_save = None
+        data_to_save = transaction.retrieve(input_routingkey)
 
-        for filename, contents in tx_files:
-            if contents["routingkey"] == routingkey:
-                filename_to_save = filename
+        if data_to_save:
+            filename_to_save = None
 
-        if not filename_to_save:
-            routingkey_for_filename = re.sub(r'\.', '-', routingkey)
-            filename_to_save = f"{routingkey_for_filename}_{uuid.uuid4()}"
+            for filename, contents in tx_files:
+                if contents["routingkey"] == input_routingkey:
+                    filename_to_save = filename
 
-        file_path = f"{transaction.txid}/{filename_to_save}"
-        storage.save(file_path, transaction.retrieve(transaction.txid, routingkey))
-        Utility.deep_set(data, "message.transaction", transaction.txid)
+            if not filename_to_save:
+                routingkey_for_filename = re.sub(r'\.', '-', input_routingkey)
+                filename_to_save = f"{routingkey_for_filename}_{uuid.uuid4()}"
+
+            file_path = f"{txid}/{filename_to_save}"
+            storage.save(file_path, data_to_save)
+
+        Utility.deep_set(data, "message.transaction", txid)
 
         return data
 
@@ -156,7 +161,11 @@ class Transform:
         base_storage: Storage,
         config: Dict[str, Any],
     ) -> Any:
-        context: Dict[str, Any] = {"message": input_message, "config": config}
+        context: Dict[str, Any] = {
+            "message": input_message,
+            "config": config,
+            "input_routingkey": Utility.deep_get(input_message, "routingkey")
+        }
         if base_storage:
             context["storage"] = base_storage.use_sub_path(
                 os.path.join("component", "private", Utility.deep_get(context, "config.name"))

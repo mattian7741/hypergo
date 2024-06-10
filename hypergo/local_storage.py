@@ -24,11 +24,11 @@ class LocalStorage(Storage):
 
     @addsubfolder
     def load_directory(self, path: str) -> List[str]:
-        print(f"path: {path}")
+        print(f"path: {path}\n")
         contents = {}
         all_filenames = [f for f in os.listdir(path) if not f.startswith('.')]
 
-        print(f"all_filenames: {all_filenames}")
+        print(f"all_filenames: {all_filenames}\n")
 
         for file_name in all_filenames:
             with open(f"{path}/{file_name}", "r", encoding="utf-8") as file:
@@ -45,4 +45,5 @@ class LocalStorage(Storage):
 
     @addsubfolder
     def create_directory(self, file_name: str) -> None:
-        Utility.create_folders_for_file(file_name)
+        print(f"in create_directory, local filename {file_name}\n")
+        Utility.create_folders(file_name)

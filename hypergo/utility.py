@@ -145,11 +145,23 @@ def find_class_instance(class_type: Type[Any], *args: Any, **kwargs: Any) -> Uni
 class Utility:  # pylint: disable=too-many-public-methods
     @staticmethod
     def create_folders_for_file(file_path: str) -> str:
+        print(f"in utility create folders filepath: {file_path}")
         directory: str = os.path.dirname(file_path)
+        print(f"directory: {directory}")
         try:
             os.makedirs(directory)
         except OSError as error:
             if not os.path.isdir(directory):
+                raise error
+        return file_path
+    
+    @staticmethod
+    def create_folders(file_path: str) -> str:
+        print("in create folders")
+        try:
+            os.makedirs(file_path)
+        except OSError as error:
+            if not os.path.isdir(file_path):
                 raise error
         return file_path
 

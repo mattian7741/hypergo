@@ -39,9 +39,9 @@ class Transaction:
         print(f"stack: {self._stack}")
         self._stack[txid][routingkey] = data
 
-    def retrieve(self, txid, routingkey) -> Any:
+    def retrieve(self, routingkey) -> Any:
         print(f"stack: {self._stack}")
-        return self._stack[txid][routingkey]
+        return self.peek().get(routingkey, None)
 
     @staticmethod
     def from_str(txstr: str) -> "Transaction":
