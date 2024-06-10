@@ -84,12 +84,6 @@ class Transform:
                 for result in func(self, data):
                     if op_name in output_operations:
                         for key in output_operations[op_name] or [None]:
-                            try:
-                                tokens = key.split(".")
-                                if tokens[0] == "message":
-                                    key = ".".join(tokens[1:])
-                            except AttributeError:
-                                pass
                             result = args[1][0](result, key, *args[1][1:])
                     yield result
 
