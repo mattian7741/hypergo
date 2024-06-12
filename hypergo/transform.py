@@ -100,7 +100,6 @@ class Transform:
         if not txid:
             print(f"in restore, not txid\n")
             transaction = Transaction()
-            txid = f"transactionkey_{transaction.txid}"
         else:
             print(f"in restore, txid = {txid}\n")
             try:
@@ -121,18 +120,18 @@ class Transform:
         print(f"stash data: {data} storage {storage}\n")
         transaction = Utility.deep_get(data, "message.transaction")
         input_routingkey = Utility.deep_get(data, "input_routingkey")
-        txid = f"transactionkey_{transaction.txid}"
+        tx_key = f"transactionkey_{transaction.txid}"
         tx_files = {}
 
         print(f"transaction: {str(transaction)}")
 
         try:
             print(f"about to load directory storage")
-            tx_files = storage.load_directory(txid)
+            tx_files = storage.load_directory(tx_key)
             print(f"tx_files: {tx_files}\n")
         except OSError as error:
             print(f"error: {error}")
-            storage.create_directory(txid)
+            storage.create_directory(tx_key)
 
         data_to_save = transaction.retrieve(input_routingkey)
 
@@ -147,10 +146,10 @@ class Transform:
                 routingkey_for_filename = re.sub(r'\.', '-', input_routingkey)
                 filename_to_save = f"{routingkey_for_filename}_{uuid.uuid4()}"
 
-            file_path = f"{txid}/{filename_to_save}"
-            storage.save(file_path, data_to_save)
+            file_path = f"{tx_key}/{filename_to_save}"
+            storage.save(file_path, str(data_to_save))
 
-        Utility.deep_set(data, "message.transaction", txid)
+        Utility.deep_set(data, "message.transaction", tx_key)
 
         return data
 
