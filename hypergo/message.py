@@ -1,6 +1,6 @@
 import json
 import sys
-from typing import Union, cast
+from typing import Union, cast, TypeAlias
 from urllib.parse import urlparse
 
 import azure.functions as func
@@ -13,6 +13,8 @@ if sys.version_info >= (3, 11):
     from typing import NotRequired
 else:
     from typing_extensions import NotRequired
+
+AzureMessage: TypeAlias = func.ServiceBusMessage | ServiceBusMessage
 
 
 class MessageType(TypedDictType):
@@ -34,6 +36,21 @@ class Message:
             "storagekey": cast(str, message.user_properties.get("storagekey")),
             "transaction": cast(str, message.user_properties.get("transaction")),
         }
+
+    @staticmethod
+    def from_azure_service_bus_sdk_message(message: ServiceBusMessage) -> MessageType:
+        return {
+            "body": json.loads(message.body.decode("utf-8")),
+            "routingkey": message.application_properties["routingkey"],
+            "storagekey": cast(str, message.application_properties.get("storagekey")),
+            "transaction": cast(str, message.application_properties.get("transaction")),
+        }
+
+    @staticmethod
+    def from_azure_service_bus_message(message: AzureMessage) -> MessageType:
+        if isinstance(message, func.ServiceBusMessage):
+            return Message.from_azure_functions_service_bus_message(message=cast(func.ServiceBusMessage, message))
+        return Message.from_azure_service_bus_sdk_message(message=cast(ServiceBusMessage, message))
 
     @staticmethod
     def from_http_request(request: func.HttpRequest) -> MessageType:

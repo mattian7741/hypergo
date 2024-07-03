@@ -1,10 +1,9 @@
 from typing import Any
 
-import azure.functions as func
 from azure.servicebus import (ServiceBusClient, ServiceBusMessage,
                               ServiceBusSender)
 
-from hypergo.message import Message, MessageType
+from hypergo.message import Message, MessageType, AzureMessage
 from hypergo.service_bus_connection import ServiceBusConnection
 
 
@@ -18,6 +17,6 @@ class AzureServiceBusConnection(ServiceBusConnection):
             sender: ServiceBusSender = self._service_bus_client.get_topic_sender(namespace)
             sender.send_messages(azure_message)
 
-    def consume(self, azure_message: func.ServiceBusMessage, **kwargs: Any) -> None:
-        message: MessageType = Message.from_azure_functions_service_bus_message(azure_message)
+    def consume(self, azure_message: AzureMessage, **kwargs: Any) -> None:
+        message: MessageType = Message.from_azure_service_bus_message(azure_message)
         self.general_consume(message, **kwargs)
