@@ -24,7 +24,6 @@ class HypergoMetric:
 
     _default_metric_exporter: MetricExporter = ConsoleMetricExporter(preferred_temporality=deltaTemporality)
     _hypergo_metric_lock: Lock = Lock()
-    _is_collected: bool = False
 
     _current_metric_readers: Set[MetricReader] = set(
         [PeriodicExportingMetricReader(_default_metric_exporter, export_interval_millis=math.inf)]
@@ -46,20 +45,18 @@ class HypergoMetric:
             HypergoMetric._current_metric_exporters_class_names.add(metric_exporter.__class__.__name__)
 
     @staticmethod
-    def get_meter(name: str) -> Meter:
-        # This function is called (on events) way after registration of all
-        # exporters done during initialization
+    def __set_meter_provider() -> None:
         metric_readers: Set[PeriodicExportingMetricReader] = HypergoMetric._current_metric_readers
         with HypergoMetric._hypergo_metric_lock:
-            if not HypergoMetric._current_meter_provider:
-                HypergoMetric._current_meter_provider = MeterProvider(
-                    metric_readers=cast(Sequence[Any], metric_readers)
-                )
-            elif HypergoMetric._is_collected:
-                # meters are cleared up
-                HypergoMetric._is_collected = False
+            if HypergoMetric._current_meter_provider:
                 HypergoMetric._current_meter_provider._meters.clear()
-            return HypergoMetric._current_meter_provider.get_meter(name=name)
+                HypergoMetric._current_meter_provider._all_metric_readers.clear()
+            HypergoMetric._current_meter_provider = MeterProvider(metric_readers=cast(Sequence[Any], metric_readers))
+
+    @staticmethod
+    def get_meter(name: str) -> Meter:
+        HypergoMetric.__set_meter_provider()
+        return HypergoMetric._current_meter_provider.get_meter(name=name)
 
     @staticmethod
     def get_metrics_callback(
@@ -113,7 +110,7 @@ class HypergoMetric:
                         "name": name,
                         "timestamp": timestamp,
                         "function_name": function_name,
-                        "metric_name": metric_name,
+                        "metric_name": metric_name
                     },
                 )
             )
@@ -128,4 +125,4 @@ class HypergoMetric:
     @staticmethod
     def collect() -> None:
         HypergoMetric._current_meter_provider.force_flush(timeout_millis=60000)
-        HypergoMetric._is_collected = True
+        HypergoMetric.__set_meter_provider()
