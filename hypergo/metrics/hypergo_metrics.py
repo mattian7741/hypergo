@@ -56,8 +56,7 @@ class HypergoMetric:
                     metric_readers=cast(Sequence[Any], metric_readers)
                 )
             elif HypergoMetric._is_collected:
-                # Do one last collection before new MeterProvider is
-                # instantiated
+                # Do one last collection before new MeterProvider is instantiated
                 HypergoMetric.collect()
                 HypergoMetric._is_collected = False
                 HypergoMetric._current_meter_provider._meters.clear()
