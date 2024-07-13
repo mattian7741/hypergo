@@ -47,15 +47,15 @@ class HypergoMetric:
     @staticmethod
     def __set_meter_provider() -> None:
         metric_readers: Set[PeriodicExportingMetricReader] = HypergoMetric._current_metric_readers
-        with HypergoMetric._hypergo_metric_lock:
-            if HypergoMetric._current_meter_provider:
-                HypergoMetric._current_meter_provider._meters.clear()
-                HypergoMetric._current_meter_provider._all_metric_readers.clear()
-            HypergoMetric._current_meter_provider = MeterProvider(metric_readers=cast(Sequence[Any], metric_readers))
+        if HypergoMetric._current_meter_provider:
+            HypergoMetric._current_meter_provider._meters.clear()
+            HypergoMetric._current_meter_provider._all_metric_readers.clear()
+        HypergoMetric._current_meter_provider = MeterProvider(metric_readers=cast(Sequence[Any], metric_readers))
 
     @staticmethod
     def get_meter(name: str) -> Meter:
-        HypergoMetric.__set_meter_provider()
+        with HypergoMetric._hypergo_metric_lock:
+            HypergoMetric.__set_meter_provider()
         return HypergoMetric._current_meter_provider.get_meter(name=name)
 
     @staticmethod
@@ -124,5 +124,6 @@ class HypergoMetric:
 
     @staticmethod
     def collect() -> None:
-        HypergoMetric._current_meter_provider.force_flush(timeout_millis=60000)
-        HypergoMetric.__set_meter_provider()
+        with HypergoMetric._hypergo_metric_lock:
+            HypergoMetric._current_meter_provider.force_flush(timeout_millis=60000)
+            HypergoMetric.__set_meter_provider()
