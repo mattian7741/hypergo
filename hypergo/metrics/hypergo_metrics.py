@@ -119,5 +119,6 @@ class HypergoMetric:
         with HypergoMetric._hypergo_metric_lock:
             for exporter in HypergoMetric._current_metric_exporters:
                 exporter.export(metrics_data=cast(InMemoryMetricReader,
-                                                  HypergoMetric._current_metric_reader.get_metrics_data()))
+                                                  HypergoMetric._current_metric_reader.get_metrics_data()),
+                                timeout_millis=60000)
             HypergoMetric._current_meter_provider._measurement_consumer._async_instruments.clear()

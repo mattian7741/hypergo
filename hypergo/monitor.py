@@ -28,7 +28,7 @@ def collect_metrics(func: Callable[..., Any]) -> Callable[..., Any]:
                 )
 
         result: Any = func(*args, **kwargs)
-        meter: Meter = HypergoMetric.get_meter(name=executor.config["namespace"]+"-"+function_name)
+        meter: Meter = HypergoMetric.get_meter(name=executor.config["name"]+"-"+function_name)
         for metric_callback, value in metric_callbacks.items():
             HypergoMetric.send(
                 meter=meter,
