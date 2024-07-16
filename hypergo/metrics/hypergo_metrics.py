@@ -1,10 +1,9 @@
-import math
 import inspect
 from threading import Lock
 from typing import Any, cast, Dict, Mapping, Set, List, Optional, Union
 from collections.abc import Callable, Iterable, Sequence
 from opentelemetry.sdk.metrics.export import (
-    PeriodicExportingMetricReader,
+    InMemoryMetricReader,
     MetricExporter,
     ConsoleMetricExporter,
     MetricReader,
@@ -16,7 +15,7 @@ from hypergo.utility import DynamicImports, get_random_string
 from hypergo.metrics.base_metrics import MetricResult
 
 deltaTemporality = {
-    ObservableGauge: AggregationTemporality.CUMULATIVE,
+    ObservableGauge: AggregationTemporality.DELTA,
 }
 
 
@@ -25,28 +24,24 @@ class HypergoMetric:
     _default_metric_exporter: MetricExporter = ConsoleMetricExporter(preferred_temporality=deltaTemporality)
     _hypergo_metric_lock: Lock = Lock()
 
-    _current_metric_readers: Set[MetricReader] = set(
-        [PeriodicExportingMetricReader(_default_metric_exporter, export_interval_millis=math.inf)]
-    )
+    _current_metric_reader: MetricReader = InMemoryMetricReader(preferred_temporality=deltaTemporality)
 
-    # _current_metric_readers should have unique exporters (Azure, Graphana, Datadog etc.).
     # In a multithreaded environment, I don't want to see the same exporter registered since there is a check for that
     # using elements inside OpenTelemetry MeterProvider._all_metric_readers
     _current_metric_exporters_class_names: Set[str] = set([_default_metric_exporter.__class__.__name__])
+    _current_metric_exporters: Set[MetricExporter] = set([_default_metric_exporter])
 
     _current_meter_provider: Union[MeterProvider, None] = None
 
     @staticmethod
     def set_metric_exporter(metric_exporter: MetricExporter) -> None:
         if metric_exporter.__class__.__name__ not in HypergoMetric._current_metric_exporters_class_names:
-            HypergoMetric._current_metric_readers.add(
-                PeriodicExportingMetricReader(metric_exporter, export_interval_millis=math.inf)
-            )
             HypergoMetric._current_metric_exporters_class_names.add(metric_exporter.__class__.__name__)
+            HypergoMetric._current_metric_exporters.add(metric_exporter)
 
     @staticmethod
     def __set_meter_provider() -> None:
-        metric_readers: Set[PeriodicExportingMetricReader] = HypergoMetric._current_metric_readers
+        metric_readers: Set[MetricReader] = set([HypergoMetric._current_metric_reader])
         if not HypergoMetric._current_meter_provider:
             HypergoMetric._current_meter_provider = MeterProvider(metric_readers=cast(Sequence[Any], metric_readers))
 
@@ -86,7 +81,6 @@ class HypergoMetric:
         _metric_values: Sequence[MetricResult] = ()
         _callbacks: Set[Callable[[CallbackOptions], Iterable[Observation]]] = set()
         metric_unit: Union[str, None] = None
-        function_name: str = meter.name
 
         _metric_values = metric_result if isinstance(metric_result, Sequence) else tuple([metric_result])
         for _metric_result in _metric_values:
@@ -107,7 +101,7 @@ class HypergoMetric:
                         "unit": unit,
                         "name": name,
                         "timestamp": timestamp,
-                        "function_name": function_name,
+                        "function_name": meter.name,
                         "metric_name": metric_name
                     },
                 )
@@ -123,4 +117,7 @@ class HypergoMetric:
     @staticmethod
     def collect() -> None:
         with HypergoMetric._hypergo_metric_lock:
-            HypergoMetric._current_meter_provider.force_flush(timeout_millis=60000)
+            for exporter in HypergoMetric._current_metric_exporters:
+                exporter.export(metrics_data=cast(InMemoryMetricReader,
+                                                  HypergoMetric._current_metric_reader.get_metrics_data()))
+            HypergoMetric._current_meter_provider._measurement_consumer._async_instruments.clear()
