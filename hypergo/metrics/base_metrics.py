@@ -15,8 +15,8 @@ class MetricResult:
     ) -> None:
         self.unit: str = unit
         self.value: Union[float, int] = value
-        self.name = name
-        self.timestamp = str(timestamp)
+        self.name: str = name
+        self.timestamp: str = str(timestamp)
 
 
 class ExecutionTimeMetrics(ABC):
