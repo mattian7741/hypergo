@@ -26,6 +26,7 @@ class OtelMetricsExporter(HypergoMetricExporter):
     _otel_metric_lock: Lock = Lock()
 
     def __init__(self, metric_exporter: MetricExporter = ConsoleMetricExporter(preferred_temporality=deltaTemporality)):
+        super(OtelMetricsExporter, self).__init__(metric_exporter=metric_exporter)
         self._metric_exporter = metric_exporter
 
     @staticmethod
@@ -77,7 +78,7 @@ class OtelMetricsExporter(HypergoMetricExporter):
                     attributes={
                         "unit": unit,
                         "name": name,
-                        "timestamp": timestamp,
+                        "timestamp": str(timestamp),
                         "function_name": meter_name,
                         "metric_name": metric_name
                     },
