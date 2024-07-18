@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 # Define the setup parameters
 setup(
     name='hypergo',
-    version='0.3.13',  # Enclose the version number in quotes
+    version='0.3.14',  # Enclose the version number in quotes
     description='Project for service bus',
     long_description_content_type='text/markdown',
     packages=find_packages(),
