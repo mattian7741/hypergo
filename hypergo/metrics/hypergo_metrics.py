@@ -8,7 +8,6 @@ from hypergo.metrics.base_metrics import MetricResult
 
 
 class HypergoMetrics:
-    _current_metric_exporters_class_names: Set[str] = set([])
     _current_metric_exporters: Set[MetricExporter] = set([])
 
     @staticmethod
@@ -25,9 +24,7 @@ class HypergoMetrics:
 
     @staticmethod
     def set_metric_exporter(metric_exporter: MetricExporter) -> None:
-        if metric_exporter.__class__.__name__ not in HypergoMetrics._current_metric_exporters_class_names:
-            HypergoMetrics._current_metric_exporters_class_names.add(metric_exporter.__class__.__name__)
-            HypergoMetrics._current_metric_exporters.add(metric_exporter)
+        HypergoMetrics._current_metric_exporters.add(metric_exporter)
 
     @staticmethod
     def get_metric_exporters() -> Set[MetricExporter]:
