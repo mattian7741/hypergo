@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 from datetime import datetime, timezone
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 
 
 @dataclass(frozen=True, slots=True)
@@ -10,6 +10,10 @@ class MetricResult:
     value: Union[float, int]
     name: Optional[str] = None
     timestamp: Optional[datetime] = datetime.now(timezone.utc)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self, dict_factory=lambda fields: {key: value if not isinstance(value, datetime) else str(value)
+                                                         for key, value in fields})
 
 
 class ExecutionTimeMetrics(ABC):

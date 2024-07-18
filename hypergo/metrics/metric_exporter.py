@@ -1,6 +1,9 @@
+import json
 from abc import abstractmethod
+from collections.abc import Iterable
+from sys import stdout
 from hypergo.metrics.base_metrics import MetricResult
-from typing import Any, Sequence
+from typing import List, Dict, Any, IO, Sequence
 
 
 class MetricExporter:
@@ -35,3 +38,24 @@ class MetricExporter:
 
     def __hash__(self) -> int:
         return self.__hash
+
+
+class ConsoleMetricExporter(MetricExporter):
+    def __init__(self, out: IO = stdout, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.out = out
+
+    def export(self, meter: str, metric_name: str, description: str,
+               metric_result: MetricResult | Sequence[MetricResult]) -> None:
+        if isinstance(metric_result, Iterable):
+            result: List[Dict[str, Any]] = []
+            for record in metric_result:
+                _result: Dict[str, Any] = record.to_dict()
+                _result.update({"meter": meter, "metric_name": metric_name, "description": description})
+                result.append(_result)
+        else:
+            result: Dict[str, Any] = metric_result.to_dict()
+            result.update({"meter": meter, "metric_name": metric_name, "description": description})
+
+        self.out.write(json.dumps(result, indent=4))
+        self.out.flush()

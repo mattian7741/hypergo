@@ -3,12 +3,12 @@ import inspect
 from abc import abstractmethod
 from typing import Callable, List, Set, Sequence, Union
 from hypergo.utility import DynamicImports
-from hypergo.metrics.metric_exporter import MetricExporter
+from hypergo.metrics.metric_exporter import MetricExporter, ConsoleMetricExporter
 from hypergo.metrics.base_metrics import MetricResult
 
 
 class HypergoMetrics:
-    _current_metric_exporters: Set[MetricExporter] = set([])
+    _current_metric_exporters: Set[MetricExporter] = set([ConsoleMetricExporter()])
 
     @staticmethod
     def get_metrics_callback(
