@@ -1,6 +1,5 @@
 
 import inspect
-from abc import abstractmethod
 from typing import Callable, List, Set, Sequence, Union
 from hypergo.utility import DynamicImports
 from hypergo.metrics.metric_exporter import MetricExporter, ConsoleMetricExporter
@@ -30,7 +29,7 @@ class HypergoMetrics:
     def get_metric_exporters() -> Set[MetricExporter]:
         return HypergoMetrics._current_metric_exporters
 
-    @abstractmethod
+    @staticmethod
     def send(meter: str, metric_name: str, description: str,
              metric_result: Union[MetricResult, Sequence[MetricResult]]):
         for exporter in HypergoMetrics.get_metric_exporters():
