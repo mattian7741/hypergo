@@ -10,7 +10,11 @@ class MetricExporter:
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.args = args
         self.kwargs = kwargs
+        self.__result_set: List[MetricResult] = []
         self.__hash = self.__get_hash()
+
+    def __del__(self) -> None:
+        self.flush()
 
     def __setattr__(self, __name: str, __value: Any) -> None:
         if __name == "__hash":
@@ -27,6 +31,24 @@ class MetricExporter:
         for _, v in sorted(self.kwargs.items(), key=lambda x: x[0]):
             _hash += hash(v)
         return _hash
+
+    def get_current_metrics(self):
+        return self.__result_set
+
+    def flush(self) -> None:
+        self.__result_set.clear()
+
+    def set_metrics(self, meter: str, metric_name: str, description: str,
+                    metric_result: MetricResult | Sequence[MetricResult]):
+        if isinstance(metric_result, Iterable):
+            for record in metric_result:
+                result: Dict[str, Any] = record.to_dict()
+                result.update({"meter": meter, "metric_name": metric_name, "description": description})
+                self.__result_set.append(result)
+        else:
+            result: Dict[str, Any] = metric_result.to_dict()
+            result.update({"meter": meter, "metric_name": metric_name, "description": description})
+            self.__result_set.append(result)
 
     @abstractmethod
     def export(self, meter: str, metric_name: str, description: str,
@@ -47,15 +69,7 @@ class ConsoleMetricExporter(MetricExporter):
 
     def export(self, meter: str, metric_name: str, description: str,
                metric_result: MetricResult | Sequence[MetricResult]) -> None:
-        if isinstance(metric_result, Iterable):
-            result: List[Dict[str, Any]] = []
-            for record in metric_result:
-                _result: Dict[str, Any] = record.to_dict()
-                _result.update({"meter": meter, "metric_name": metric_name, "description": description})
-                result.append(_result)
-        else:
-            result: Dict[str, Any] = metric_result.to_dict()
-            result.update({"meter": meter, "metric_name": metric_name, "description": description})
-
-        self.out.write(json.dumps(result, indent=4))
+        self.set_metrics(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
+        self.out.write(json.dumps(self.get_current_metrics(), indent=4))
         self.out.flush()
+        self.flush()
