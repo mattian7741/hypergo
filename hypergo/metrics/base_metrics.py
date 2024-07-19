@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 
@@ -14,6 +14,21 @@ class MetricResult:
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self, dict_factory=lambda fields: {key: value if not isinstance(value, datetime) else str(value)
                                                          for key, value in fields})
+
+
+@dataclass(frozen=True, slots=True)
+class Meter:
+    meter_name: str
+    metric_group_name: str
+    result: MetricResult
+    description: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        _result: Dict[str, Any] = {"meter_name": self.meter_name, "meter_group_name": self.metric_group_name,
+                                   "description": self.description
+                                   }
+        _result.update(self.result.to_dict())
+        return _result
 
 
 class ExecutionTimeMetrics(ABC):

@@ -26,8 +26,7 @@ class OtelMetricsExporter(HypergoMetricExporter):
     _otel_metric_lock: Lock = Lock()
 
     def __init__(self, metric_exporter: MetricExporter = ConsoleMetricExporter(preferred_temporality=deltaTemporality)):
-        super(OtelMetricsExporter, self).__init__(metric_exporter=metric_exporter)
-        self._metric_exporter = metric_exporter
+        super(OtelMetricsExporter, self).__init__(_metric_exporter=metric_exporter)
 
     @staticmethod
     def __set_meter_provider() -> None:
