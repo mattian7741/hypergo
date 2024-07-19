@@ -14,7 +14,8 @@ class MetricExporter:
         self.__result_set: List[Meter] = []
 
     def __del__(self) -> None:
-        self.flush()
+        if self.__result_set and len(self.__result_set):
+            self.flush()
 
     def __setattr__(self, __name: str, __value: Any) -> None:
         if __name == "__hash":
