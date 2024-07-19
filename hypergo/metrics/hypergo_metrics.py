@@ -33,4 +33,5 @@ class HypergoMetrics:
     def send(meter: str, metric_name: str, description: str,
              metric_result: Union[MetricResult, Sequence[MetricResult]]):
         for exporter in HypergoMetrics.get_metric_exporters():
-            exporter.export(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
+            exporter.send(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
+            exporter.flush()

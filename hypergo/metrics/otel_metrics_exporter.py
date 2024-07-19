@@ -93,10 +93,12 @@ class OtelMetricsExporter(HypergoMetricExporter):
             description=cast(str, description),
         )
 
-    def export(self, meter: str, metric_name: str, description: str,
-               metric_result: Union[MetricResult, Sequence[MetricResult]]) -> None:
+    def send(self, meter: str, metric_name: str, description: str,
+             metric_result: Union[MetricResult, Sequence[MetricResult]]) -> None:
         OtelMetricsExporter.__create_observable_gauge(meter_name=meter, metric_name=metric_name,
                                                       description=description, metric_result=metric_result)
+
+    def export(self):
         self._metric_exporter.export(metrics_data=cast(InMemoryMetricReader,
                                                        OtelMetricsExporter._current_metric_reader.get_metrics_data()),
                                      timeout_millis=60000)

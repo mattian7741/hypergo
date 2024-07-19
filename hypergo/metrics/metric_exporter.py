@@ -37,6 +37,7 @@ class MetricExporter:
         return result
 
     def flush(self) -> None:
+        self.export()
         self.__result_set.clear()
 
     def set_metrics(self, meter: str, metric_name: str, description: str,
@@ -49,10 +50,13 @@ class MetricExporter:
             self.__result_set.append(Meter(meter_name=meter, metric_group_name=metric_name, result=metric_result,
                                            description=description))
 
+    def send(self, meter: str, metric_name: str, description: str,
+             metric_result: MetricResult | Sequence[MetricResult]) -> None:
+        self.set_metrics(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
+
     @abstractmethod
-    def export(self, meter: str, metric_name: str, description: str,
-               metric_result: MetricResult | Sequence[MetricResult]) -> None:
-        raise NotImplementedError("Derived class must implement export method")
+    def export(self):
+        raise NotImplementedError("export function must be implemented by the subclass")
 
     def __eq__(self, __value: object) -> bool:
         return isinstance(__value, MetricExporter) and (vars(self) == vars(__value))
@@ -65,9 +69,6 @@ class ConsoleMetricExporter(MetricExporter):
     def __init__(self, out: IO = stdout) -> None:
         super().__init__(out=out)
 
-    def export(self, meter: str, metric_name: str, description: str,
-               metric_result: MetricResult | Sequence[MetricResult]) -> None:
-        self.set_metrics(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
+    def export(self) -> None:
         self.out.write(json.dumps(self.get_current_metrics(), indent=4))
         self.out.flush()
-        self.flush()
