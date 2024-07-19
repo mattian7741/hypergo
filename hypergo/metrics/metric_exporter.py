@@ -40,8 +40,8 @@ class MetricExporter:
         if self.export():
             self.__result_set.clear()
 
-    def set_metrics(self, meter: str, metric_name: str, description: str,
-                    metric_result: MetricResult | Sequence[MetricResult]):
+    def __set_metrics(self, meter: str, metric_name: str, description: str,
+                      metric_result: MetricResult | Sequence[MetricResult]):
         if isinstance(metric_result, Iterable):
             for result in metric_result:
                 self.__result_set.append(Meter(meter_name=meter, metric_group_name=metric_name, result=result,
@@ -52,7 +52,7 @@ class MetricExporter:
 
     def send(self, meter: str, metric_name: str, description: str,
              metric_result: MetricResult | Sequence[MetricResult]) -> None:
-        self.set_metrics(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
+        self.__set_metrics(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
 
     @abstractmethod
     def export(self) -> bool:
