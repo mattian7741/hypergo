@@ -4,7 +4,6 @@ from opentelemetry.sdk.metrics.export import (
     InMemoryMetricReader,
     MetricReader,
     MetricExporter,
-    MetricExportResult,
     ConsoleMetricExporter,
     AggregationTemporality,
 )
