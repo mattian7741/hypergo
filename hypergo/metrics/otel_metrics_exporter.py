@@ -4,6 +4,7 @@ from opentelemetry.sdk.metrics.export import (
     InMemoryMetricReader,
     MetricReader,
     MetricExporter,
+    MetricExportResult,
     ConsoleMetricExporter,
     AggregationTemporality,
 )
@@ -98,7 +99,8 @@ class OtelMetricsExporter(HypergoMetricExporter):
         OtelMetricsExporter.__create_observable_gauge(meter_name=meter, metric_name=metric_name,
                                                       description=description, metric_result=metric_result)
 
-    def export(self):
-        self._metric_exporter.export(metrics_data=cast(InMemoryMetricReader,
-                                                       OtelMetricsExporter._current_metric_reader.get_metrics_data()),
-                                     timeout_millis=60000)
+    def export(self) -> bool:
+        result: int = self._metric_exporter.export(metrics_data=cast(InMemoryMetricReader,
+                                                   OtelMetricsExporter._current_metric_reader.get_metrics_data()),
+                                                   timeout_millis=60000)
+        return not result
