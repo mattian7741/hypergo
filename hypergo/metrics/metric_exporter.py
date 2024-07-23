@@ -12,16 +12,13 @@ class MetricExporter:
             self.__setattr__(k, v)
         self.__hash = self.__get_hash()
         self.__result_set: List[Meter] = []
-        self.__is_shutdown: bool = False
 
     def __del__(self) -> None:
-        self.__is_shutdown = True
-        if self.__result_set and len(self.__result_set):
-            self.flush()
+        self.shutdown()
 
-    @property
-    def shutdown(self) -> bool:
-        return self.__is_shutdown
+    def shutdown(self):
+        while self.__result_set and len(self.__result_set):
+            self.flush()
 
     def __setattr__(self, __name: str, __value: Any) -> None:
         if __name == "__hash":
