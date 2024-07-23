@@ -1,4 +1,5 @@
 
+from threading import Lock
 import inspect
 from typing import Callable, List, Set, Sequence, Union
 from hypergo.utility import DynamicImports
@@ -8,6 +9,7 @@ from hypergo.metrics.base_metrics import MetricResult
 
 class HypergoMetrics:
     _current_metric_exporters: Set[MetricExporter] = set([ConsoleMetricExporter()])
+    _current_metric_exporters_lock: Lock = Lock()
 
     @staticmethod
     def get_metrics_callback(
@@ -23,7 +25,8 @@ class HypergoMetrics:
 
     @staticmethod
     def set_metric_exporter(metric_exporter: MetricExporter) -> None:
-        HypergoMetrics._current_metric_exporters.add(metric_exporter)
+        with HypergoMetrics._current_metric_exporters_lock:
+            HypergoMetrics._current_metric_exporters.add(metric_exporter)
 
     @staticmethod
     def get_metric_exporters() -> Set[MetricExporter]:
@@ -32,6 +35,8 @@ class HypergoMetrics:
     @staticmethod
     def send(meter: str, metric_name: str, description: str,
              metric_result: Union[MetricResult, Sequence[MetricResult]]):
-        for exporter in HypergoMetrics.get_metric_exporters():
-            exporter.send(meter=meter, metric_name=metric_name, description=description, metric_result=metric_result)
-            exporter.flush()
+        with HypergoMetrics._current_metric_exporters_lock:
+            for exporter in HypergoMetrics.get_metric_exporters():
+                exporter.send(meter=meter, metric_name=metric_name, description=description,
+                              metric_result=metric_result)
+                exporter.flush()
