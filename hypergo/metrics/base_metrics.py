@@ -1,3 +1,5 @@
+import platform
+from importlib.metadata import version
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Tuple, Union
 from datetime import datetime, timezone
@@ -22,10 +24,14 @@ class Meter:
     metric_group_name: str
     result: MetricResult
     description: str
+    system: str = platform.uname().system
+    client: str = platform.uname().node
+    sdk_version: str = version("hypergo")
 
     def to_dict(self) -> Dict[str, Any]:
         _result: Dict[str, Any] = {"meter_name": self.meter_name, "meter_group_name": self.metric_group_name,
-                                   "description": self.description
+                                   "description": self.description, "system": self.system,
+                                   "client": self.client, "sdk_version": self.sdk_version
                                    }
         _result.update(self.result.to_dict())
         return _result
