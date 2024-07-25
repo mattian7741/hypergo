@@ -32,7 +32,7 @@ class AzureApplicationInsights:
         )
 
     def __del__(self) -> None:
-        # self.log_exporter.shutdown()
+        self.log_exporter.shutdown()
         self.trace_exporter.shutdown()
         self.metric_exporter.shutdown()
 
