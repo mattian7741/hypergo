@@ -14,8 +14,12 @@ class MetricResult:
     timestamp: Optional[datetime] = datetime.now(timezone.utc)
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self, dict_factory=lambda fields: {key: value if not isinstance(value, datetime) else str(value)
-                                                         for key, value in fields})
+        return asdict(
+            self,
+            dict_factory=lambda fields: {
+                key: value if not isinstance(value, datetime) else str(value) for key, value in fields
+            },
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,10 +33,14 @@ class Meter:
     sdk_version: str = version("hypergo")
 
     def to_dict(self) -> Dict[str, Any]:
-        _result: Dict[str, Any] = {"meter_name": self.meter_name, "meter_group_name": self.metric_group_name,
-                                   "description": self.description, "system": self.system,
-                                   "client": self.client, "sdk_version": self.sdk_version
-                                   }
+        _result: Dict[str, Any] = {
+            "meter_name": self.meter_name,
+            "meter_group_name": self.metric_group_name,
+            "description": self.description,
+            "system": self.system,
+            "client": self.client,
+            "sdk_version": self.sdk_version,
+        }
         _result.update(self.result.to_dict())
         return _result
 

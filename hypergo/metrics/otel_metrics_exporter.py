@@ -4,6 +4,7 @@ from opentelemetry.sdk.metrics.export import (
     InMemoryMetricReader,
     MetricReader,
     MetricExporter,
+    MetricExportResult,
     ConsoleMetricExporter,
     AggregationTemporality,
 )
@@ -14,7 +15,7 @@ from hypergo.metrics.base_metrics import MetricResult
 from hypergo.utility import get_random_string
 
 
-deltaTemporality = {
+deltaTemporality: Dict[type, AggregationTemporality] = {
     ObservableGauge: AggregationTemporality.DELTA,
 }
 
@@ -26,19 +27,20 @@ class OtelMetricsExporter(HypergoMetricExporter):
     _otel_metric_lock: Lock = Lock()
 
     def __init__(self, metric_exporter: MetricExporter = ConsoleMetricExporter(preferred_temporality=deltaTemporality)):
-        super(OtelMetricsExporter, self).__init__(_metric_exporter=metric_exporter)
+        super().__init__(_metric_exporter=metric_exporter)
 
     @staticmethod
     def __set_meter_provider() -> None:
         if not OtelMetricsExporter._current_meter_provider:
-            OtelMetricsExporter._current_meter_provider = MeterProvider(metric_readers=cast(Sequence[Any],
-                                                                        [OtelMetricsExporter._current_metric_reader]))
+            OtelMetricsExporter._current_meter_provider = MeterProvider(
+                metric_readers=cast(Sequence[Any], [OtelMetricsExporter._current_metric_reader])
+            )
 
     @staticmethod
     def __get_meter(name: str) -> Meter:
         with OtelMetricsExporter._otel_metric_lock:
             OtelMetricsExporter.__set_meter_provider()
-        return OtelMetricsExporter._current_meter_provider.get_meter(name=name)
+        return cast(MeterProvider, OtelMetricsExporter._current_meter_provider).get_meter(name=name)
 
     @staticmethod
     def __create_observable_gauge(
@@ -79,7 +81,7 @@ class OtelMetricsExporter(HypergoMetricExporter):
                         "name": name,
                         "timestamp": str(timestamp),
                         "function_name": meter_name,
-                        "metric_name": metric_name
+                        "metric_name": metric_name,
                     },
                 )
             )
@@ -87,19 +89,22 @@ class OtelMetricsExporter(HypergoMetricExporter):
         meter: Meter = OtelMetricsExporter.__get_meter(name=meter_name)
 
         meter.create_observable_gauge(
-            name=metric_name+"-"+get_random_string(20),
+            name=metric_name + "-" + get_random_string(20),
             callbacks=cast(Sequence[Callable[[CallbackOptions], Iterable[Observation]]], _callbacks),
             unit=cast(str, metric_unit),
             description=cast(str, description),
         )
 
-    def send(self, meter: str, metric_name: str, description: str,
-             metric_result: Union[MetricResult, Sequence[MetricResult]]) -> None:
-        OtelMetricsExporter.__create_observable_gauge(meter_name=meter, metric_name=metric_name,
-                                                      description=description, metric_result=metric_result)
+    def send(
+        self, meter: str, metric_name: str, description: str, metric_result: Union[MetricResult, Sequence[MetricResult]]
+    ) -> None:
+        OtelMetricsExporter.__create_observable_gauge(
+            meter_name=meter, metric_name=metric_name, description=description, metric_result=metric_result
+        )
 
     def export(self) -> bool:
-        result: int = self._metric_exporter.export(metrics_data=cast(InMemoryMetricReader,
-                                                   OtelMetricsExporter._current_metric_reader.get_metrics_data()),
-                                                   timeout_millis=60000)
-        return not result
+        result: MetricExportResult = cast(MetricExporter, getattr(self, "_metric_exporter")).export(
+            metrics_data=cast(InMemoryMetricReader, OtelMetricsExporter._current_metric_reader).get_metrics_data(),
+            timeout_millis=60000,
+        )
+        return not result.value

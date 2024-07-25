@@ -9,7 +9,7 @@ import json
 import lzma
 import os
 import random
-import string
+import string as string_mod
 import uuid
 from collections import deque
 from datetime import datetime
@@ -30,10 +30,10 @@ from line_profiler import LineProfiler
 from hypergo.custom_types import JsonType, TypedDictType
 
 
-def get_random_string(length):
+def get_random_string(length: int) -> str:
     # choose from all lowercase letter
-    letters = string.ascii_lowercase
-    return ''.join(random.choice(letters) for _ in range(length))
+    letters = string_mod.ascii_lowercase
+    return "".join(random.choice(letters) for _ in range(length))
 
 
 # ref https://code.activestate.com/recipes/577504/

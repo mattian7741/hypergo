@@ -103,7 +103,7 @@ class Transform:
 
     @staticmethod
     def stash_transaction(data: Any, key: str, storage: Storage) -> Any:
-        transaction = Utility.deep_get(data, 'transaction')
+        transaction = Utility.deep_get(data, "transaction")
         txid = f"transactionkey_{transaction.txid}"
         storage.save(txid, str(transaction))
         Utility.deep_set(data, "message.transaction", txid)

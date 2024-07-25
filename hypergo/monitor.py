@@ -30,10 +30,10 @@ def collect_metrics(func: Callable[..., Any]) -> Callable[..., Any]:
         result: Any = func(*args, **kwargs)
         for metric_callback, value in metric_callbacks.items():
             HypergoMetrics.send(
-                meter=executor.config["name"]+"-"+function_name,
+                meter=executor.config["name"] + "-" + function_name,
                 metric_name=metric_callback.__name__,
                 metric_result=metric_callback(value),
-                description=metric_callback.__doc__,
+                description=cast(str, metric_callback.__doc__),
             )
         metric_callbacks.clear()
         return result

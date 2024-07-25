@@ -1,4 +1,3 @@
-
 import atexit
 from threading import Lock
 import inspect
@@ -34,18 +33,20 @@ class HypergoMetrics:
         return HypergoMetrics._current_metric_exporters
 
     @staticmethod
-    def shutdown():
+    def shutdown() -> None:
         with HypergoMetrics._current_metric_exporters_lock:
             for exporter in HypergoMetrics.get_metric_exporters():
                 exporter.shutdown()
 
     @staticmethod
-    def send(meter: str, metric_name: str, description: str,
-             metric_result: Union[MetricResult, Sequence[MetricResult]]):
+    def send(
+        meter: str, metric_name: str, description: str, metric_result: Union[MetricResult, Sequence[MetricResult]]
+    ) -> None:
         with HypergoMetrics._current_metric_exporters_lock:
             for exporter in HypergoMetrics.get_metric_exporters():
-                exporter.send(meter=meter, metric_name=metric_name, description=description,
-                              metric_result=metric_result)
+                exporter.send(
+                    meter=meter, metric_name=metric_name, description=description, metric_result=metric_result
+                )
                 exporter.flush()
 
 

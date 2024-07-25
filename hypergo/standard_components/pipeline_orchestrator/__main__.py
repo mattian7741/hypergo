@@ -1,4 +1,7 @@
-def pass_message(body):
+from typing import Any, Dict
+
+
+def pass_message(body: Dict[str, Any]) -> Dict[str, Any]:
     # pipeline orchestrator has one job: passing a message from one component to the next by updating its routing key.
     # Thus, it doesn't care what the body of the input/output is, and the
     # function itself is basically a no-op

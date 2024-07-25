@@ -2,8 +2,8 @@ import json
 from abc import abstractmethod
 from collections.abc import Iterable
 from sys import stdout
+from typing import cast, List, Dict, Any, TextIO, Sequence
 from hypergo.metrics.base_metrics import Meter, MetricResult
-from typing import List, Dict, Any, IO, Sequence
 
 
 class MetricExporter:
@@ -16,16 +16,16 @@ class MetricExporter:
     def __del__(self) -> None:
         self.shutdown()
 
-    def shutdown(self):
-        while self.__result_set and len(self.__result_set):
+    def shutdown(self) -> None:
+        while self.__result_set and len(self.__result_set) > 0:
             self.flush()
 
     def __setattr__(self, __name: str, __value: Any) -> None:
         if __name == "__hash":
-            raise AttributeError('''Can't set attribute "{0}"'''.format(__name))
-        elif __name == f"_{self.__class__.__name__}__hash":
+            raise AttributeError(f"Can't set attribute {__name}")
+        if __name == f"_{self.__class__.__name__}__hash":
             if hasattr(self, __name):
-                raise AttributeError('''Can't set attribute "{0}"'''.format(__name))
+                raise AttributeError(f"Can't set attribute {__name}")
         object.__setattr__(self, __name, __value)
 
     def __get_hash(self) -> int:
@@ -44,15 +44,18 @@ class MetricExporter:
         if self.export():
             self.__result_set.clear()
 
-    def send(self, meter: str, metric_name: str, description: str,
-             metric_result: MetricResult | Sequence[MetricResult]) -> None:
+    def send(
+        self, meter: str, metric_name: str, description: str, metric_result: MetricResult | Sequence[MetricResult]
+    ) -> None:
         if isinstance(metric_result, Iterable):
             for result in metric_result:
-                self.__result_set.append(Meter(meter_name=meter, metric_group_name=metric_name, result=result,
-                                               description=description))
+                self.__result_set.append(
+                    Meter(meter_name=meter, metric_group_name=metric_name, result=result, description=description)
+                )
         else:
-            self.__result_set.append(Meter(meter_name=meter, metric_group_name=metric_name, result=metric_result,
-                                           description=description))
+            self.__result_set.append(
+                Meter(meter_name=meter, metric_group_name=metric_name, result=metric_result, description=description)
+            )
 
     @abstractmethod
     def export(self) -> bool:
@@ -66,10 +69,11 @@ class MetricExporter:
 
 
 class ConsoleMetricExporter(MetricExporter):
-    def __init__(self, out: IO = stdout) -> None:
+    def __init__(self, out: TextIO = stdout) -> None:
         super().__init__(out=out)
 
     def export(self) -> bool:
-        self.out.write(json.dumps(self.get_current_metrics(), indent=4))
-        self.out.flush()
+        out: TextIO = cast(TextIO, getattr(self, "out"))
+        out.write(json.dumps(self.get_current_metrics(), indent=4))
+        out.flush()
         return True

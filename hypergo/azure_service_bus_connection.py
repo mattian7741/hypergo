@@ -3,7 +3,7 @@ from typing import Any
 from azure.servicebus import (ServiceBusClient, ServiceBusMessage,
                               ServiceBusSender)
 
-from hypergo.message import Message, MessageType, AzureMessage
+from hypergo.message import AzureMessage, Message, MessageType
 from hypergo.service_bus_connection import ServiceBusConnection
 
 

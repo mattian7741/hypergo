@@ -1,6 +1,6 @@
 import json
 import sys
-from typing import Union, cast, TypeAlias
+from typing import Any, Dict, TypeAlias, Union, cast
 from urllib.parse import urlparse
 
 import azure.functions as func
@@ -41,16 +41,16 @@ class Message:
     def from_azure_service_bus_sdk_message(message: ServiceBusMessage) -> MessageType:
         return {
             "body": json.loads(message.body.decode("utf-8")),
-            "routingkey": message.application_properties["routingkey"],
-            "storagekey": cast(str, message.application_properties.get("storagekey")),
-            "transaction": cast(str, message.application_properties.get("transaction")),
+            "routingkey": cast(str, cast(Dict[str, Any], message.application_properties).get("routingkey")),
+            "storagekey": cast(str, cast(Dict[str, Any], message.application_properties).get("storagekey")),
+            "transaction": cast(str, cast(Dict[str, Any], message.application_properties).get("transaction")),
         }
 
     @staticmethod
     def from_azure_service_bus_message(message: AzureMessage) -> MessageType:
         if isinstance(message, func.ServiceBusMessage):
-            return Message.from_azure_functions_service_bus_message(message=cast(func.ServiceBusMessage, message))
-        return Message.from_azure_service_bus_sdk_message(message=cast(ServiceBusMessage, message))
+            return Message.from_azure_functions_service_bus_message(message=message)
+        return Message.from_azure_service_bus_sdk_message(message=message)
 
     @staticmethod
     def from_http_request(request: func.HttpRequest) -> MessageType:
