@@ -51,6 +51,7 @@ class BaseLogger:
         self.log(message, level=logging.DEBUG, **kwargs)
 
     def info(self, message: str, **kwargs) -> None:
+        self.log("BEN IM LOGGING", level=logging.INFO)
         self.log(message, level=logging.INFO, **kwargs)
 
     def warning(self, message: str, **kwargs) -> None:
