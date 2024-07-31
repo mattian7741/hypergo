@@ -25,7 +25,7 @@ class AzureLogger(BaseLogger, AzureApplicationInsights):
     def get_handler(self) -> logging.Handler:
         return HypergoLogger.get_handler(self.log_level)
 
-    def log(self, message: str, level: Optional[int] = None) -> None:
+    def log(self, message: str, level: Optional[int] = None, **kwargs) -> None:
         if level is None:
             level = self.log_level
         self.logger.setLevel(level)
@@ -34,4 +34,4 @@ class AzureLogger(BaseLogger, AzureApplicationInsights):
             cast(str, self.name), attributes={"trace-type": "user"}
         ):
             # Log the message with the specified level
-            self.logger.log(level, message)
+            self.logger.log(level, message, **kwargs)
