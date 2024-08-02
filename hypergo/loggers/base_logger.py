@@ -21,12 +21,12 @@ class BaseLogger:
             handler.setFormatter(self.format)
         return handler
 
-    def log(self, message: str, level: Optional[int] = None) -> None:
+    def log(self, message: str, level: Optional[int] = None, **kwargs) -> None:
         if level is None:
             level = self.log_level
         self.logger.setLevel(level)
         # Log the message with the specified level
-        self.logger.log(level, message)
+        self.logger.log(level, message, **kwargs)
 
     @property
     def name(self) -> Optional[str]:
@@ -47,17 +47,17 @@ class BaseLogger:
     def __get_formatter(self, formatter: Union[str, logging.Formatter, None]) -> Union[logging.Formatter, None]:
         return logging.Formatter(formatter) if isinstance(formatter, str) else formatter
 
-    def debug(self, message: str) -> None:
-        self.log(message, level=logging.DEBUG)
+    def debug(self, message: str, **kwargs) -> None:
+        self.log(message, level=logging.DEBUG, **kwargs)
 
-    def info(self, message: str) -> None:
-        self.log(message, level=logging.INFO)
+    def info(self, message: str, **kwargs) -> None:
+        self.log(message, level=logging.INFO, **kwargs)
 
-    def warning(self, message: str) -> None:
-        self.log(message, level=logging.WARNING)
+    def warning(self, message: str, **kwargs) -> None:
+        self.log(message, level=logging.WARNING, **kwargs)
 
-    def error(self, message: str) -> None:
-        self.log(message, level=logging.ERROR)
+    def error(self, message: str, **kwargs) -> None:
+        self.log(message, level=logging.ERROR, **kwargs)
 
-    def critical(self, message: str) -> None:
-        self.log(message, level=logging.CRITICAL)
+    def critical(self, message: str, **kwargs) -> None:
+        self.log(message, level=logging.CRITICAL, **kwargs)
