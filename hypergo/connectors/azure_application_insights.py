@@ -12,8 +12,11 @@ from hypergo.secrets import Secrets
 
 class AzureApplicationInsights:
     def __init__(self, secrets: Secrets):
-        self._log_exporter: LogExporter = AzureMonitorLogExporter.from_connection_string(
-            conn_str=secrets.get("APPLICATIONINSIGHTS-CONNECTION-STRING"), disable_offline_storage=True
+        self._log_exporter: LogExporter = cast(
+            LogExporter,
+            AzureMonitorLogExporter.from_connection_string(
+                conn_str=secrets.get("APPLICATIONINSIGHTS-CONNECTION-STRING"), disable_offline_storage=True
+            ),
         )
         self._trace_exporter: TraceExporter = cast(
             TraceExporter,
@@ -21,8 +24,11 @@ class AzureApplicationInsights:
                 conn_str=secrets.get("APPLICATIONINSIGHTS-CONNECTION-STRING"), disable_offline_storage=True
             ),
         )
-        self._metric_exporter: MetricExporter = AzureMonitorMetricExporter.from_connection_string(
-            conn_str=secrets.get("APPLICATIONINSIGHTS-CONNECTION-STRING"), disable_offline_storage=True
+        self._metric_exporter: MetricExporter = cast(
+            MetricExporter,
+            AzureMonitorMetricExporter.from_connection_string(
+                conn_str=secrets.get("APPLICATIONINSIGHTS-CONNECTION-STRING"), disable_offline_storage=True
+            ),
         )
 
     def __del__(self) -> None:

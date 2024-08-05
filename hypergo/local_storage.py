@@ -1,6 +1,6 @@
 import os
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, Union, cast
 
 from hypergo.storage import Storage
 from hypergo.utility import Utility
@@ -16,14 +16,22 @@ def addsubfolder(func: Callable[..., Any]) -> Callable[..., Any]:
 
 class LocalStorage(Storage):
     @addsubfolder
-    def load(self, file_name: str) -> str:
-        with open(file_name, "r", encoding="utf-8") as file:
-            content: str = file.read()
+    def load(self, file_name: str) -> bytes | str:
+        content: Union[bytes, str] = ""
+        try:
+            with open(file_name, mode="r", encoding="utf-8") as file:
+                content = file.read()
+        except UnicodeDecodeError:
+            with open(file_name, mode="rb") as file:
+                content = file.read()
         return content
 
     @addsubfolder
-    def save(self, file_name: str, content: str) -> None:
+    def save(self, file_name: str, content: bytes | str) -> None:
         Utility.create_folders_for_file(file_name)
-
-        with open(file_name, "w", encoding="utf-8") as file:
-            file.write(content)
+        try:
+            with open(file_name, "w", encoding="utf-8") as file:
+                file.write(cast(str, content))
+        except UnicodeEncodeError:
+            with open(file_name, mode="wb") as file:
+                file.write(cast(bytes, content))

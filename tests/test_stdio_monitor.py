@@ -28,9 +28,8 @@ class TestAzureMonitor(unittest.TestCase):
         except Exception:
             pass
 
-    @patch("hypergo.metrics.hypergo_metrics.HypergoMetric.send")
-    @patch("opentelemetry.sdk.metrics.MeterProvider.force_flush")
-    def test_stdio_monitor(self, mock_collect, mock_send):
+    @patch("hypergo.metrics.metric_exporter.MetricExporter.flush")
+    def test_stdio_monitor(self, mock_exporter_flush):
         cfg: ConfigType = {
                                 "version": "2.0.0",
                                 "namespace": "datalink",
@@ -47,8 +46,7 @@ class TestAzureMonitor(unittest.TestCase):
 
         executor = Executor(cfg, logger=logger)
         self.__mock_send_message(executor=executor, message=self.message, config=cfg)
-        assert mock_send.call_count == 5
-        mock_collect.assert_called_with(timeout_millis=60000)
+        assert mock_exporter_flush.call_count == 5
 
 
 if __name__ == '__main__':

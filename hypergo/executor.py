@@ -174,7 +174,7 @@ class Executor:
     @Transform.operation("encryption")
     @Transform.operation("serialization")
     @Transform.operation("transaction")
-    def execute(self, context: Any) -> Generator[MessageType, None, None]:
+    def execute(self, context: Any) -> Generator[ContextType, None, None]:
         # This mutates config with substitutions - not necessary for input binding substitution
         # Unclear which approach is better - do we want the original config with references?  Or
         # Do we want to mutate config and replace values with substitutions?

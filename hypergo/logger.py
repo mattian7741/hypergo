@@ -30,7 +30,7 @@ def function_log(func: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         executor: Executor = cast(Executor, find_class_instance(Executor, *args, **kwargs))
-        function_logger: Logger = executor.logger if executor else logger
+        function_logger: Logger = cast(Logger, executor.logger) if executor else logger
         function_logger.name = executor.callback.__name__ if executor else f"hypergo.{func.__name__}"
         function_logger.format = JSONFormatter()
         try:

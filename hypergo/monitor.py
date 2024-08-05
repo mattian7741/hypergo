@@ -4,7 +4,7 @@ from typing import Any, Callable, Dict, Union, cast
 from hypergo.executor import Executor
 from hypergo.metrics import custom_metrics_metadata
 from hypergo.metrics.base_metrics import MetricResult
-from hypergo.metrics.hypergo_metrics import HypergoMetric, Meter
+from hypergo.metrics.hypergo_metrics import HypergoMetrics
 from hypergo.utility import find_class_instance
 
 __all__ = ["collect_metrics"]
@@ -17,7 +17,7 @@ def collect_metrics(func: Callable[..., Any]) -> Callable[..., Any]:
         function_name: str = executor.callback.__name__
         metric_callbacks: Dict[Callable[[Union[MetricResult, None]], MetricResult], MetricResult] = {}
         for custom_metrics in custom_metrics_metadata:
-            for metric_callback in HypergoMetric.get_metrics_callback(
+            for metric_callback in HypergoMetrics.get_metrics_callback(
                 package=custom_metrics.package,
                 module_name=custom_metrics.module_name,
                 class_name=custom_metrics.class_name,
@@ -28,15 +28,14 @@ def collect_metrics(func: Callable[..., Any]) -> Callable[..., Any]:
                 )
 
         result: Any = func(*args, **kwargs)
-        meter: Meter = HypergoMetric.get_meter(name=function_name)
         for metric_callback, value in metric_callbacks.items():
-            HypergoMetric.send(
-                meter=meter,
+            HypergoMetrics.send(
+                meter=executor.config["name"] + "-" + function_name,
                 metric_name=metric_callback.__name__,
                 metric_result=metric_callback(value),
-                description=metric_callback.__doc__,
+                description=cast(str, metric_callback.__doc__),
             )
-        HypergoMetric.collect()
+        metric_callbacks.clear()
         return result
 
     return wrapper

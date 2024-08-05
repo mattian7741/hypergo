@@ -1,22 +1,48 @@
+import platform
+from importlib.metadata import version
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 from datetime import datetime, timezone
+from dataclasses import dataclass, asdict
 
 
+@dataclass(frozen=True, slots=True)
 class MetricResult:
-    __slots__ = ("unit", "value", "name", "timestamp")
+    unit: str
+    value: Union[float, int]
+    name: Optional[str] = None
+    timestamp: Optional[datetime] = datetime.now(timezone.utc)
 
-    def __init__(
-        self,
-        unit: str,
-        value: Union[float, int],
-        name: Optional[str] = None,
-        timestamp: Optional[datetime] = datetime.now(timezone.utc),
-    ) -> None:
-        self.unit: str = unit
-        self.value: Union[float, int] = value
-        self.name = name
-        self.timestamp = str(timestamp)
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(
+            self,
+            dict_factory=lambda fields: {
+                key: value if not isinstance(value, datetime) else str(value) for key, value in fields
+            },
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class Meter:
+    meter_name: str
+    metric_group_name: str
+    result: MetricResult
+    description: str
+    system: str = platform.uname().system
+    client: str = platform.uname().node
+    sdk_version: str = version("hypergo")
+
+    def to_dict(self) -> Dict[str, Any]:
+        _result: Dict[str, Any] = {
+            "meter_name": self.meter_name,
+            "meter_group_name": self.metric_group_name,
+            "description": self.description,
+            "system": self.system,
+            "client": self.client,
+            "sdk_version": self.sdk_version,
+        }
+        _result.update(self.result.to_dict())
+        return _result
 
 
 class ExecutionTimeMetrics(ABC):

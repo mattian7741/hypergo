@@ -32,7 +32,7 @@ class Config:
             cfg_dict: JsonDict = yaml.safe_load(file_handle)
             cfg: ConfigType = Config.convert(cfg_dict)
             if cfg != cfg_dict:
-                logging.warning(f"Mapping version deprecated; use:\n{cfg}")
+                logging.warning("Mapping version deprecated; use:\n %s", cfg)
             return cfg
 
     @staticmethod
@@ -41,7 +41,7 @@ class Config:
             cfg_dict: JsonDict = json.load(file_handle)
             cfg: ConfigType = Config.convert(cfg_dict)
             if cfg != cfg_dict:
-                logging.warning(f"Mapping version deprecated; use:\n{cfg}")
+                logging.warning("Mapping version deprecated; use:\n %s", cfg)
             return cfg
 
     @staticmethod
